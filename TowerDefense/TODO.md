@@ -1,0 +1,122 @@
+# TowerDefenseCoop — Suivi du projet
+
+> Cours : IFT-2103 H26 — Programmation de jeu vidéo  
+> Équipe : 3 membres  
+> Moteur : Unity 6 (Universal 2D)
+
+---
+
+## TP2 — Interactivité (29 mars 2026)
+
+### 🔧 Setup & Architecture
+- [x] Créer le projet Unity 6 (Universal 2D)
+- [x] Organiser la structure des dossiers (Scripts, Prefabs, Sprites, Audio…)
+- [x] Créer la scène principale (map, séparateur, base centrale)
+
+### 🕹️ Contrôle des agents (multijoueur local) `/15`
+- [x] Mouvement top-down Joueur 1 (clavier — ZQSD)
+- [x] Mouvement Joueur 2 (manette Switch — Joy-Con ou Pro Controller)
+- [x] Migrer vers le nouveau **Input System** (package Unity) pour les deux joueurs
+- [x] Coder le **gestionnaire de contrôles maison** (traitement des inputs, pas juste les lire)
+- [x] Chaque joueur confiné dans sa moitié de map
+- [ ] Action : poser une tour (bouton dédié par joueur)
+- [ ] Action : améliorer / vendre une tour
+
+### 🗺️ Flot d'application `/15`
+- [x] Scène **Menu principal** (bouton Jouer, Quitter)
+- [x] Scène **Jeu** (boucle principale)
+- [x] Scène **Game Over** (victoire / défaite + retour menu)
+- [x] Transitions entre scènes
+- [x] Phase de **préparation** (placement des tours, timer)
+- [x] Phase de **défense** (vagues d'ennemis actives, joueurs se baladent)
+- [x] **Écran scindé** (split-screen local — caméra P1 gauche, caméra P2 droite)
+
+### 🤖 Agent autonome `/10`
+- [ ] Créer le prefab `Enemy`
+- [ ] Implémenter le **pathfinding A\*** maison (grille + algo)
+  > ⚠️ NavMesh autorisé comme source de données seulement — l'algo doit être codé par l'équipe
+- [ ] `GridManager.cs` — grille de navigation
+- [ ] `AStarPathfinder.cs` — algorithme A\*
+- [ ] `EnemyAI.cs` — suivi de chemin + comportement
+- [ ] Les ennemis recalculent leur chemin quand une tour est posée
+
+### 🔍 Recherche de chemin `/10`
+- [ ] Grille de walkability mise à jour dynamiquement (tours = obstacles)
+- [ ] Chemin recalculé en temps réel
+- [ ] Gestion des cas bloqués (chemin impossible)
+
+### 🖥️ Interface graphique `/20`
+- [ ] HUD Joueur 1 (ressources, zone gauche)
+- [ ] HUD Joueur 2 (ressources, zone droite)
+- [ ] HP de la base centrale (barre de vie partagée)
+- [ ] Indicateur de vague actuelle et vague suivante
+- [ ] Timer de la phase de préparation
+- [ ] Écran de Game Over (score, vagues survécues)
+- [ ] Feedback visuel au survol d'une case (placement de tour valide/invalide)
+
+### 🌫️ Culling logique (bonus / critère qualité)
+- [ ] Implémenter un **brouillard de guerre**
+  > Les ennemis sont cachés tant qu'ils sont hors de portée des tours ou des joueurs  
+  > ⚠️ Doit être basé sur la position des agents, PAS sur la caméra
+
+### ⭐ Fonctionnalités individuelles `/20 chacun`
+- [ ] **Membre 1** — IA avancée (comportements variés : rush, tank, contournement)
+- [ ] **Membre 2** — Personnalisation des entrées (rebind des touches/boutons)
+
+### 📄 Document TP2
+- [ ] Diagramme du flot d'application
+- [ ] Schéma de contrôle des agents (clavier + manette)
+- [ ] Description de l'IA de l'agent autonome (A\*)
+- [ ] Description des fonctionnalités supplémentaires individuelles
+
+---
+
+## TP3 — Rétroaction audiovisuelle (30 avril 2026)
+
+### 🎬 Animation `/` 
+- [ ] Animation des ennemis (marche, mort)
+- [ ] Animation des tours (rotation vers cible, tir)
+- [ ] Animation des joueurs (idle, marche)
+- [ ] Animation de l'interface (transitions HUD, pop-ups)
+
+### ✨ Effets de particules
+- [ ] Explosion à la mort d'un ennemi
+- [ ] Effet de tir des tours
+- [ ] Effet de destruction d'une tour
+- [ ] Effet visuel sur la base quand elle prend des dégâts
+
+### 🔊 Audio
+- [ ] Musique de fond (loop)
+- [ ] Son de tir des tours
+- [ ] Son de mort des ennemis
+- [ ] Son de placement d'une tour
+- [ ] Son de dégâts sur la base
+- [ ] Son de Game Over / Victoire
+
+### ⭐ Fonctionnalités individuelles TP3 `/20 chacun`
+- [ ] **Membre 1** — Génération procédurale de la map
+- [ ] **Membre 2** — Personnalisation des avatars
+
+### 📄 Document TP3
+- [ ] Méthodes d'animation des agents
+- [ ] Méthodes d'animation de l'interface
+- [ ] Description des effets de particules et contextes
+- [ ] Description de l'ambiance sonore
+- [ ] Liste des effets sonores et contextes
+- [ ] Description de la fonctionnalité optionnelle
+
+---
+
+## Notes techniques
+
+| Sujet | Décision |
+|---|---|
+| Input | Nouveau Input System Unity (traitement maison obligatoire) |
+| Joueur 1 | Clavier (ZQSD + touches d'action) |
+| Joueur 2 | Manette Switch (Joy-Con ou Pro Controller) |
+| Pathfinding | A\* maison (NavMesh comme données seulement) |
+| Culling | Brouillard de guerre basé sur position des agents |
+| Multijoueur | Local, deux contrôleurs physiques séparés |
+| Vue | Top-down 2D |
+| Map | Divisée en deux moitiés symétriques |
+| Base | Centrale, partagée entre les deux joueurs |

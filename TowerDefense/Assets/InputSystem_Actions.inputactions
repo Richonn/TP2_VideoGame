@@ -32,6 +32,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "LancerVague",
+                    "type": "Button",
+                    "id": "a1000005-0000-0000-0000-000000000001",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -111,6 +120,17 @@
                     "action": "Interact",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a1000022-0000-0000-0000-000000000001",
+                    "path": "<Keyboard>/tab",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "LancerVague",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         },
@@ -140,6 +160,15 @@
                     "name": "Interact",
                     "type": "Button",
                     "id": "a2000004-0000-0000-0000-000000000002",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "LancerVague",
+                    "type": "Button",
+                    "id": "a2000005-0000-0000-0000-000000000002",
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "",
@@ -177,6 +206,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Interact",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a2000022-0000-0000-0000-000000000002",
+                    "path": "<Gamepad>/buttonEast",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "LancerVague",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

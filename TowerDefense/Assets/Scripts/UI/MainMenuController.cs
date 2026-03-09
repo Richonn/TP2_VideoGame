@@ -4,7 +4,6 @@ public class MainMenuController : MonoBehaviour
 {
     public void OnPlayPressed()
     {
-        Debug.Log("[MainMenu] OnPlayPressed appelé !");
         if (GameManager.Instance == null)
         {
             Debug.LogError("[MainMenu] GameManager introuvable dans la scène !");

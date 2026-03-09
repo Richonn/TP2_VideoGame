@@ -32,18 +32,20 @@
 - [x] **Écran scindé** (split-screen local — caméra P1 gauche, caméra P2 droite)
 
 ### 🤖 Agent autonome `/10`
-- [ ] Créer le prefab `Enemy`
-- [ ] Implémenter le **pathfinding A\*** maison (grille + algo)
+- [x] Créer le prefab `Enemy` (dans Unity Editor)
+- [x] Implémenter le **pathfinding A\*** maison (grille + algo)
   > ⚠️ NavMesh autorisé comme source de données seulement — l'algo doit être codé par l'équipe
-- [ ] `GridManager.cs` — grille de navigation
-- [ ] `AStarPathfinder.cs` — algorithme A\*
-- [ ] `EnemyAI.cs` — suivi de chemin + comportement
-- [ ] Les ennemis recalculent leur chemin quand une tour est posée
+- [x] `GridManager.cs` — grille de navigation
+- [x] `AStarPathfinder.cs` — algorithme A\*
+- [x] `EnemyAI.cs` — suivi de chemin + comportement
+- [x] Les ennemis recalculent leur chemin quand une tour est posée
+- [x] `WaveManager.cs` — spawn des vagues, difficulté croissante
+- [x] `BaseController.cs` — PV de la base, déclenchement Game Over
 
 ### 🔍 Recherche de chemin `/10`
-- [ ] Grille de walkability mise à jour dynamiquement (tours = obstacles)
-- [ ] Chemin recalculé en temps réel
-- [ ] Gestion des cas bloqués (chemin impossible)
+- [x] Grille de walkability mise à jour dynamiquement (tours = obstacles)
+- [x] Chemin recalculé en temps réel
+- [x] Gestion des cas bloqués (chemin impossible)
 
 ### 🖥️ Interface graphique `/20`
 - [ ] HUD Joueur 1 (ressources, zone gauche)

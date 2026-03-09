@@ -32,7 +32,6 @@ public class PlayerController : MonoBehaviour
         }
 
         _input = InputManager.Instance.GetInput(playerNumber);
-        Debug.Log($"[Joueur {playerNumber}] Move={_input.MoveDirection}");
 
         if (_input.PlaceTowerPressed)
             OnPlaceTower();

@@ -70,14 +70,14 @@ public class GameManager : MonoBehaviour
     private void TickPrepTimer()
     {
         PrepTimeRemaining -= Time.deltaTime;
-        OnPrepTimerUpdated?.Invoke(PrepTimeRemaining);
 
         if (PrepTimeRemaining <= 0f)
         {
             PrepTimeRemaining = 0f;
             _prepRunning = false;
-            EnterDefensePhase();
         }
+
+        OnPrepTimerUpdated?.Invoke(PrepTimeRemaining);
     }
 
     public void EnterDefensePhase()

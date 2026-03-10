@@ -52,7 +52,50 @@ public class GameManager : MonoBehaviour
     {
         if (scene.name != "Game") return;
         SceneManager.sceneLoaded -= OnGameSceneLoaded;
+        
+        Debug.Log("[GameManager] Scène Game chargée - initialisation...");
+        
+        // Ajuster le zoom des caméras
+        AdjustCameraZoom();
+        
+        // Initialiser le menu de pause de la scène
+        InitializePauseMenu();
+        
+        Debug.Log("[GameManager] Initialisation complète");
         EnterPreparationPhase();
+    }
+
+    private void AdjustCameraZoom()
+    {
+        // Dézoomez les caméras du jeu (Game scene)
+        Camera[] cameras = FindObjectsByType<Camera>(FindObjectsSortMode.None);
+        Debug.Log($"[GameManager] {cameras.Length} caméra(s) trouvée(s)");
+        
+        foreach (Camera cam in cameras)
+        {
+            if (cam.orthographic && (cam.gameObject.name == "Camera_P1" || cam.gameObject.name == "Camera_P2"))
+            {
+                Debug.Log($"[GameManager] {cam.gameObject.name}: Size actuelle = {cam.orthographicSize}");
+                cam.orthographicSize = 10f;  // Réduit de 6 à 5 pour dézoomzer
+                Debug.Log($"[GameManager] {cam.gameObject.name}: Zoom ajusté à 10");
+            }
+        }
+    }
+
+    private void InitializePauseMenu()
+    {
+        // S'assurer que le PauseMenuController existe
+        if (PauseMenuController.Instance == null)
+        {
+            Debug.Log("[GameManager] Création du PauseMenuController...");
+            GameObject pauseManagerGO = new GameObject("PauseMenuManager");
+            pauseManagerGO.AddComponent<PauseMenuController>();
+            Debug.Log("[GameManager] PauseMenuController créé");
+        }
+        else
+        {
+            Debug.Log("[GameManager] PauseMenuController existe déjà");
+        }
     }
 
     public void EnterPreparationPhase()

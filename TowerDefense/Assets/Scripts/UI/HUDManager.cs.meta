@@ -1,2 +1,23 @@
 fileFormatVersion: 2
 guid: 5c694c1cea87d4058a80deb2635faadc
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - texteRessourcesP1: {instanceID: 0}
+  - barreReadyP1: {instanceID: 0}
+  - texteRessourcesP2: {instanceID: 0}
+  - barreReadyP2: {instanceID: 0}
+  - texteVague: {instanceID: 0}
+  - texteTimer: {instanceID: 0}
+  - textePhase: {instanceID: 0}
+  - imagePhase: {instanceID: 0}
+  - baseHP: {instanceID: 0}
+  - prepSprite: {instanceID: 0}
+  - defenseSprite: {instanceID: 0}
+  - readySystem: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

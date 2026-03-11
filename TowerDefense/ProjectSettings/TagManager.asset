@@ -13,9 +13,9 @@ TagManager:
   - Water
   - UI
   - Enemies
-  - 
-  - 
-  - 
+  - Grid Overlay
+  - Player
+  - Background
   - 
   - 
   - 
@@ -41,6 +41,18 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Background
+    uniqueID: 2202431041
+    locked: 0
+  - name: Grid Overlay
+    uniqueID: 4063631299
+    locked: 0
+  - name: Player
+    uniqueID: 1299101981
+    locked: 0
+  - name: UI
+    uniqueID: 3559862325
     locked: 0
   m_RenderingLayers:
   - Default

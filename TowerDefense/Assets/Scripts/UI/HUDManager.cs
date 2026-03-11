@@ -22,7 +22,11 @@ public class HUDManager : MonoBehaviour
     [SerializeField] private TMP_Text texteVague;
     [SerializeField] private TMP_Text texteTimer;
     [SerializeField] private TMP_Text textePhase;
-    [SerializeField] private Slider   sliderBaseHP;
+    [SerializeField] private Image imagePhase;
+    // [SerializeField] private Slider   sliderBaseHP;
+    [SerializeField] private Image baseHP;       // Image type=Filled
+    public Sprite prepSprite;
+    public Sprite defenseSprite;
 
     [Header("Références")]
     [SerializeField] private ReadySystem readySystem;
@@ -79,8 +83,20 @@ public class HUDManager : MonoBehaviour
         {
             GameManager.GameState.Preparation => "PRÉPARATION",
             GameManager.GameState.Defense     => "DÉFENSE",
-            _                                 => ""
+            _                                 => "TEST"
         };
+        if (imagePhase == null) return;
+        imagePhase.sprite = etat switch {
+            GameManager.GameState.Preparation => prepSprite,
+            GameManager.GameState.Defense     => defenseSprite,
+            _                                 => prepSprite
+        };
+        if (etat == GameManager.GameState.Preparation) {
+            Debug.Log("Changing to prepSprite: " + (prepSprite != null ? prepSprite.name : "NULL"));
+        }
+        if (etat == GameManager.GameState.Defense) {
+            Debug.Log("Changing to defenseSprite: " + (defenseSprite != null ? defenseSprite.name : "NULL"));
+        }
     }
 
     private void OnWaveChanged(int vague)
@@ -94,25 +110,28 @@ public class HUDManager : MonoBehaviour
         if (texteTimer == null) return;
 
         if (temps > 0f)
-            texteTimer.text = $"{Mathf.CeilToInt(temps)}s";
+            texteTimer.text = $"Prochaine vague dans {Mathf.CeilToInt(temps)}s";
         else
-            texteTimer.text = "Maintien Tab / B pour lancer !";
+            texteTimer.text = "Maintien Tab / B pour lancer";
     }
 
     private void OnPVChanges(int pvActuels, int pvMax)
     {
-        if (sliderBaseHP != null)
-        {
-            sliderBaseHP.maxValue = pvMax;
-            sliderBaseHP.value    = pvActuels;
+        // if (sliderBaseHP != null)
+        // {
+        //     sliderBaseHP.maxValue = pvMax;
+        //     sliderBaseHP.value    = pvActuels;
+        // }
+        if (baseHP != null) {
+            baseHP.fillAmount = pvActuels / pvMax;
         }
     }
 
     private void OnRessourcesChangees(int playerIndex, int montant)
     {
         if (playerIndex == 1 && texteRessourcesP1 != null)
-            texteRessourcesP1.text = $"Or : {montant}";
+            texteRessourcesP1.text = $"{montant}";
         else if (playerIndex == 2 && texteRessourcesP2 != null)
-            texteRessourcesP2.text = $"Or : {montant}";
+            texteRessourcesP2.text = $"{montant}";
     }
 }

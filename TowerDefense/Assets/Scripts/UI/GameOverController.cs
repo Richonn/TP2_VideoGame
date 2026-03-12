@@ -13,16 +13,16 @@ public class GameOverController : MonoBehaviour
         if (GameManager.Instance == null) return;
 
         bool victory = GameManager.Instance.IsVictory;
-        int  waves   = GameManager.Instance.CurrentWave;
+        int waves = GameManager.Instance.CurrentWave;
 
         if (titleText != null)
-            titleText.text = victory ? "VICTOIRE !" : "GAME OVER";
+            titleText.text = victory ? "VICTORY!" : "GAME OVER";
 
         if (subtitleText != null)
-            subtitleText.text = victory ? "La base a tenu bon." : "La base a été détruite.";
+            subtitleText.text = victory ? "The base held." : "The base was destroyed.";
 
         if (wavesText != null)
-            wavesText.text = $"Vagues survécues : {waves}";
+            wavesText.text = $"Waves survived: {waves}";
     }
 
     public void OnReplayPressed()

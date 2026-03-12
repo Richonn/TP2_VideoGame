@@ -2,142 +2,104 @@ using UnityEngine;
 using System.Collections.Generic;
 using System;
 
-/// <summary>
-/// Gère la grille de navigation 2D.
-///
-/// La grille couvre toute la map. Chaque cellule est soit walkable,
-/// soit obstacle (tour placée ou décor bloquant).
-///
-/// Appeler MettreAJourGrille() après chaque placement de tour pour
-/// déclencher le recalcul de chemin de tous les ennemis actifs.
-/// </summary>
 public class GridManager : MonoBehaviour
 {
-    // ── Singleton ─────────────────────────────────────────────────────────────
     public static GridManager Instance { get; private set; }
 
-    // ── Inspector ─────────────────────────────────────────────────────────────
-    [Header("Dimensions de la grille")]
-    [Tooltip("Coin bas-gauche de la grille en coordonnées monde.")]
-    [SerializeField] private Vector2 origineGrille = new Vector2(-20f, -10f);
-    [SerializeField] private int largeur  = 20;
-    [SerializeField] private int hauteur  = 10;
-    [SerializeField] private float tailleCellule = 2f;
+    [Header("Grid Dimensions")]
+    [SerializeField] private Vector2 gridOrigin = new Vector2(-20f, -10f);
+    [SerializeField] private int width = 20;
+    [SerializeField] private int height = 10;
+    [SerializeField] private float cellSize = 2f;
 
     [Header("Obstacles")]
-    [Tooltip("Layer des tours et obstacles bloquants.")]
-    [SerializeField] private LayerMask layerObstacles;
+    [SerializeField] private LayerMask obstacleLayer;
 
-    // ── Événement ─────────────────────────────────────────────────────────────
-    /// <summary>Déclenché quand la grille est mise à jour (tour posée, etc.).</summary>
-    public static event Action OnGrilleModifiee;
+    public static event Action OnGridUpdated;
 
-    // ── Données ───────────────────────────────────────────────────────────────
-    public int Largeur  => largeur;
-    public int Hauteur  => hauteur;
-    public float TailleCellule => tailleCellule;
+    public int Width => width;
+    public int Height => height;
+    public float CellSize => cellSize;
 
-    private Node[,] _grille;
+    private Node[,] _grid;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        InitialiserGrille();
+        InitGrid();
     }
 
-    // ── Initialisation ────────────────────────────────────────────────────────
-    private void InitialiserGrille()
+    private void InitGrid()
     {
-        _grille = new Node[largeur, hauteur];
+        _grid = new Node[width, height];
 
-        for (int x = 0; x < largeur; x++)
+        for (int x = 0; x < width; x++)
         {
-            for (int y = 0; y < hauteur; y++)
+            for (int y = 0; y < height; y++)
             {
-                Vector2 positionMonde = CentreDeCase(x, y);
-                bool walkable = !Physics2D.OverlapCircle(
-                    positionMonde,
-                    tailleCellule * 0.4f,
-                    layerObstacles
-                );
-                _grille[x, y] = new Node(walkable, positionMonde, x, y);
+                Vector2 pos = CellCenter(x, y);
+                bool walkable = !Physics2D.OverlapCircle(pos, cellSize * 0.4f, obstacleLayer);
+                _grid[x, y] = new Node(walkable, pos, x, y);
             }
         }
     }
 
-    /// <summary>
-    /// Recalcule la walkability de toute la grille,
-    /// puis notifie les ennemis de recalculer leur chemin.
-    /// Appeler après chaque placement / destruction de tour.
-    /// </summary>
-    public void MettreAJourGrille()
+    public void UpdateGrid()
     {
-        InitialiserGrille();
-        OnGrilleModifiee?.Invoke();
+        InitGrid();
+        OnGridUpdated?.Invoke();
     }
 
-    // ── Accès aux noeuds ──────────────────────────────────────────────────────
-    public Node ObtenirNoeud(int x, int y)
+    public Node GetNode(int x, int y)
     {
-        if (x < 0 || x >= largeur || y < 0 || y >= hauteur) return null;
-        return _grille[x, y];
+        if (x < 0 || x >= width || y < 0 || y >= height) return null;
+        return _grid[x, y];
     }
 
-    /// <summary>Convertit une position monde en noeud de grille.</summary>
-    public Node MondeVersNoeud(Vector2 positionMonde)
+    public Node WorldToNode(Vector2 worldPos)
     {
-        int x = Mathf.FloorToInt((positionMonde.x - origineGrille.x) / tailleCellule);
-        int y = Mathf.FloorToInt((positionMonde.y - origineGrille.y) / tailleCellule);
-        return ObtenirNoeud(x, y);
+        int x = Mathf.FloorToInt((worldPos.x - gridOrigin.x) / cellSize);
+        int y = Mathf.FloorToInt((worldPos.y - gridOrigin.y) / cellSize);
+        return GetNode(x, y);
     }
 
-    /// <summary>Retourne la position monde du centre d'une case.</summary>
-    public Vector2 CentreDeCase(int x, int y)
+    public Vector2 CellCenter(int x, int y)
     {
-        return origineGrille + new Vector2(
-            x * tailleCellule + tailleCellule * 0.5f,
-            y * tailleCellule + tailleCellule * 0.5f
-        );
+        return gridOrigin + new Vector2(x * cellSize + cellSize * 0.5f, y * cellSize + cellSize * 0.5f);
     }
 
-    /// <summary>Retourne les 8 voisins d'un noeud (orthogonaux + diagonaux).</summary>
-    public List<Node> ObtenirVoisins(Node noeud)
+    public List<Node> GetNeighbors(Node node)
     {
-        List<Node> voisins = new List<Node>(8);
+        List<Node> neighbors = new List<Node>(8);
 
         for (int dx = -1; dx <= 1; dx++)
         {
             for (int dy = -1; dy <= 1; dy++)
             {
                 if (dx == 0 && dy == 0) continue;
-                Node voisin = ObtenirNoeud(noeud.gridX + dx, noeud.gridY + dy);
-                if (voisin != null) voisins.Add(voisin);
+                Node neighbor = GetNode(node.gridX + dx, node.gridY + dy);
+                if (neighbor != null) neighbors.Add(neighbor);
             }
         }
 
-        return voisins;
+        return neighbors;
     }
 
-    /// <summary>Remet à zéro les coûts de tous les noeuds (avant chaque recherche A*).</summary>
-    public void ReinitialisationCouts()
+    public void ResetCosts()
     {
-        foreach (Node n in _grille)
-            n.Reinitialiser();
+        foreach (Node n in _grid)
+            n.Reset();
     }
 
-    // ── Debug Gizmos ──────────────────────────────────────────────────────────
     void OnDrawGizmos()
     {
-        if (_grille == null) return;
+        if (_grid == null) return;
 
-        foreach (Node n in _grille)
+        foreach (Node n in _grid)
         {
-            Gizmos.color = n.walkable
-                ? new Color(0f, 1f, 0f, 0.15f)
-                : new Color(1f, 0f, 0f, 0.4f);
-            Gizmos.DrawCube(n.worldPosition, Vector3.one * (tailleCellule * 0.9f));
+            Gizmos.color = n.walkable ? new Color(0f, 1f, 0f, 0.15f) : new Color(1f, 0f, 0f, 0.4f);
+            Gizmos.DrawCube(n.worldPosition, Vector3.one * (cellSize * 0.9f));
         }
     }
 }

@@ -13,8 +13,7 @@ public class GameManager : MonoBehaviour
     public float PrepTimeRemaining { get; private set; }
     public bool IsVictory { get; private set; }
 
-    [Header("Phase de préparation")]
-    [Tooltip("Durée du timer de préparation en secondes.")]
+    [Header("Preparation Phase")]
     [SerializeField] private float prepDuration = 30f;
 
     public static event Action<GameState> OnPhaseChanged;
@@ -26,79 +25,54 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
     void Update()
     {
-        if (_prepRunning)
-            TickPrepTimer();
+        if (_prepRunning) TickPrepTimer();
     }
 
     public void StartGame()
     {
         CurrentWave = 0;
         SceneManager.sceneLoaded += OnGameSceneLoaded;
-        ChargerViaEcranChargement("Game");
+        LoadWithLoadingScreen("Game");
     }
 
     private void OnGameSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (scene.name != "Game") return;
         SceneManager.sceneLoaded -= OnGameSceneLoaded;
-        
-        Debug.Log("[GameManager] Scène Game chargée - initialisation...");
-        
-        // Ajuster le zoom des caméras
+
         AdjustCameraZoom();
-        
-        // Initialiser le menu de pause de la scène
         InitializePauseMenu();
-        
-        Debug.Log("[GameManager] Initialisation complète");
-        EnterPreparationPhase();
+        EnterPrepPhase();
     }
 
     private void AdjustCameraZoom()
     {
-        // Dézoomez les caméras du jeu (Game scene)
         Camera[] cameras = FindObjectsByType<Camera>(FindObjectsSortMode.None);
-        Debug.Log($"[GameManager] {cameras.Length} caméra(s) trouvée(s)");
-        
+
         foreach (Camera cam in cameras)
         {
             if (cam.orthographic && (cam.gameObject.name == "Camera_P1" || cam.gameObject.name == "Camera_P2"))
-            {
-                Debug.Log($"[GameManager] {cam.gameObject.name}: Size actuelle = {cam.orthographicSize}");
-                cam.orthographicSize = 10f;  // Réduit de 6 à 5 pour dézoomzer
-                Debug.Log($"[GameManager] {cam.gameObject.name}: Zoom ajusté à 10");
-            }
+                cam.orthographicSize = 10f;
         }
     }
 
     private void InitializePauseMenu()
     {
-        // S'assurer que le PauseMenuController existe
         if (PauseMenuController.Instance == null)
         {
-            Debug.Log("[GameManager] Création du PauseMenuController...");
-            GameObject pauseManagerGO = new GameObject("PauseMenuManager");
-            pauseManagerGO.AddComponent<PauseMenuController>();
-            Debug.Log("[GameManager] PauseMenuController créé");
-        }
-        else
-        {
-            Debug.Log("[GameManager] PauseMenuController existe déjà");
+            GameObject go = new GameObject("PauseMenuManager");
+            go.AddComponent<PauseMenuController>();
         }
     }
 
-    public void EnterPreparationPhase()
+    public void EnterPrepPhase()
     {
         CurrentState = GameState.Preparation;
         PrepTimeRemaining = prepDuration;
@@ -135,7 +109,7 @@ public class GameManager : MonoBehaviour
 
     public void WaveCompleted()
     {
-        EnterPreparationPhase();
+        EnterPrepPhase();
     }
 
     public void TriggerGameOver(bool victory)
@@ -147,7 +121,7 @@ public class GameManager : MonoBehaviour
         OnPhaseChanged?.Invoke(CurrentState);
         OnGameEnded?.Invoke(victory);
 
-        ChargerViaEcranChargement("GameOver");
+        LoadWithLoadingScreen("GameOver");
     }
 
     public void ReturnToMenu()
@@ -156,9 +130,9 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene("MainMenu");
     }
 
-    private void ChargerViaEcranChargement(string scene)
+    private void LoadWithLoadingScreen(string scene)
     {
-        LoadingScreenController.SceneCible = scene;
+        LoadingScreenController.TargetScene = scene;
         SceneManager.LoadScene("Loading");
     }
 }

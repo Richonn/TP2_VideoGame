@@ -4,69 +4,49 @@ using UnityEngine.SceneManagement;
 using System.Collections;
 using TMPro;
 
-/// <summary>
-/// Écran de chargement affiché entre chaque transition de scène.
-///
-/// Usage :
-///   LoadingScreenController.SceneCible = "Game";
-///   SceneManager.LoadScene("Loading");
-///
-/// Le chargement est retardé artificiellement (DELAI_MINIMUM) pour
-/// garantir une preuve visuelle de l'écran, même sur des scènes légères.
-/// </summary>
 public class LoadingScreenController : MonoBehaviour
 {
-    // ── API statique ──────────────────────────────────────────────────────────
-    /// <summary>Scène à charger après l'écran de chargement.</summary>
-    public static string SceneCible = "Game";
+    public static string TargetScene = "Game";
 
-    // ── Config ────────────────────────────────────────────────────────────────
-    private const float DELAI_MINIMUM = 2f;   // secondes — preuve visuelle pour le prof
+    private const float MIN_DELAY = 2f;
 
-    // ── Refs UI ───────────────────────────────────────────────────────────────
-    private RectTransform   _rtRemplissage;
-    private TextMeshProUGUI _texteProgression;
+    private RectTransform _fillRect;
+    private TextMeshProUGUI _progressText;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     void Start()
     {
-        // Caméra minimale requise pour que Unity affiche le Canvas
         GameObject camGO = new GameObject("LoadingCamera");
         Camera cam = camGO.AddComponent<Camera>();
-        cam.clearFlags       = CameraClearFlags.SolidColor;
-        cam.backgroundColor  = new Color(0.08f, 0.08f, 0.12f, 1f);
-        cam.cullingMask      = 0; // ne rend rien du monde, juste le fond
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.08f, 0.08f, 0.12f, 1f);
+        cam.cullingMask = 0;
 
-        ConstruireUI();
-        StartCoroutine(ChargerScene());
+        BuildUI();
+        StartCoroutine(RunLoadSequence());
     }
 
-    // ── Coroutine principale ──────────────────────────────────────────────────
-    private IEnumerator ChargerScene()
+    private IEnumerator RunLoadSequence()
     {
-        AsyncOperation op = SceneManager.LoadSceneAsync(SceneCible);
-        op.allowSceneActivation = false;    // garde l'écran visible jusqu'à la fin
+        AsyncOperation op = SceneManager.LoadSceneAsync(TargetScene);
+        op.allowSceneActivation = false;
 
-        float tempsEcoule = 0f;
+        float elapsed = 0f;
 
         while (true)
         {
-            tempsEcoule += Time.unscaledDeltaTime;
+            elapsed += Time.unscaledDeltaTime;
 
-            // Unity bloque op.progress à 0.9 quand allowSceneActivation = false
-            float progressAssets = Mathf.Clamp01(op.progress / 0.9f);
-            float progressTemps  = Mathf.Clamp01(tempsEcoule / DELAI_MINIMUM);
+            float assetProgress = Mathf.Clamp01(op.progress / 0.9f);
+            float timeProgress = Mathf.Clamp01(elapsed / MIN_DELAY);
+            float displayProgress = Mathf.Min(assetProgress, timeProgress);
 
-            // On avance au minimum des deux : on n'affiche pas 100% avant le délai ET le chargement
-            float progressAffichee = Mathf.Min(progressAssets, progressTemps);
+            _fillRect.anchorMax = new Vector2(displayProgress, 1f);
+            _progressText.text = $"{Mathf.RoundToInt(displayProgress * 100)}%";
 
-            _rtRemplissage.anchorMax = new Vector2(progressAffichee, 1f);
-            _texteProgression.text   = $"{Mathf.RoundToInt(progressAffichee * 100)}%";
-
-            if (tempsEcoule >= DELAI_MINIMUM && op.progress >= 0.9f)
+            if (elapsed >= MIN_DELAY && op.progress >= 0.9f)
             {
-                _rtRemplissage.anchorMax = Vector2.one;
-                _texteProgression.text   = "100%";
+                _fillRect.anchorMax = Vector2.one;
+                _progressText.text = "100%";
                 yield return new WaitForSecondsRealtime(0.3f);
                 op.allowSceneActivation = true;
                 yield break;
@@ -76,81 +56,74 @@ public class LoadingScreenController : MonoBehaviour
         }
     }
 
-    // ── Construction de l'UI ──────────────────────────────────────────────────
-    private void ConstruireUI()
+    private void BuildUI()
     {
-        // Canvas
         GameObject canvasGO = new GameObject("LoadingCanvas");
         Canvas canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 200;
 
         CanvasScaler scaler = canvasGO.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight  = 0.5f;
+        scaler.matchWidthOrHeight = 0.5f;
 
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // Fond
-        GameObject fond = new GameObject("Fond");
-        fond.transform.SetParent(canvasGO.transform, false);
-        fond.AddComponent<Image>().color = new Color(0.08f, 0.08f, 0.12f, 1f);
-        Etirer(fond.GetComponent<RectTransform>());
+        GameObject background = new GameObject("Background");
+        background.transform.SetParent(canvasGO.transform, false);
+        background.AddComponent<Image>().color = new Color(0.08f, 0.08f, 0.12f, 1f);
+        Stretch(background.GetComponent<RectTransform>());
 
-        // Titre
-        GameObject titre = new GameObject("Titre");
-        titre.transform.SetParent(canvasGO.transform, false);
-        TextMeshProUGUI tmpTitre = titre.AddComponent<TextMeshProUGUI>();
-        tmpTitre.text      = "CHARGEMENT";
-        tmpTitre.fontSize  = 72;
-        tmpTitre.fontStyle = FontStyles.Bold;
-        tmpTitre.color     = Color.white;
-        tmpTitre.alignment = TextAlignmentOptions.Center;
-        tmpTitre.textWrappingMode = TextWrappingModes.NoWrap;
-        RectTransform rtTitre = titre.GetComponent<RectTransform>();
-        rtTitre.anchorMin = new Vector2(0.2f, 0.55f);
-        rtTitre.anchorMax = new Vector2(0.8f, 0.72f);
-        rtTitre.offsetMin = Vector2.zero;
-        rtTitre.offsetMax = Vector2.zero;
+        GameObject title = new GameObject("Title");
+        title.transform.SetParent(canvasGO.transform, false);
+        TextMeshProUGUI titleText = title.AddComponent<TextMeshProUGUI>();
+        titleText.text = "CHARGEMENT";
+        titleText.fontSize = 72;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.color = Color.white;
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.textWrappingMode = TextWrappingModes.NoWrap;
+        RectTransform titleRT = title.GetComponent<RectTransform>();
+        titleRT.anchorMin = new Vector2(0.2f, 0.55f);
+        titleRT.anchorMax = new Vector2(0.8f, 0.72f);
+        titleRT.offsetMin = Vector2.zero;
+        titleRT.offsetMax = Vector2.zero;
 
-        // Fond de la barre
-        GameObject barreFond = new GameObject("BarreFond");
-        barreFond.transform.SetParent(canvasGO.transform, false);
-        barreFond.AddComponent<Image>().color = new Color(0.2f, 0.2f, 0.28f, 1f);
-        RectTransform rtBarreFond = barreFond.GetComponent<RectTransform>();
-        rtBarreFond.anchorMin = new Vector2(0.15f, 0.44f);
-        rtBarreFond.anchorMax = new Vector2(0.85f, 0.51f);
-        rtBarreFond.offsetMin = Vector2.zero;
-        rtBarreFond.offsetMax = Vector2.zero;
+        GameObject barBackground = new GameObject("BarBackground");
+        barBackground.transform.SetParent(canvasGO.transform, false);
+        barBackground.AddComponent<Image>().color = new Color(0.2f, 0.2f, 0.28f, 1f);
+        RectTransform barRT = barBackground.GetComponent<RectTransform>();
+        barRT.anchorMin = new Vector2(0.15f, 0.44f);
+        barRT.anchorMax = new Vector2(0.85f, 0.51f);
+        barRT.offsetMin = Vector2.zero;
+        barRT.offsetMax = Vector2.zero;
 
-        // Remplissage de la barre (anchorMax.x animé de 0 à 1)
-        GameObject remplissageGO = new GameObject("Remplissage");
-        remplissageGO.transform.SetParent(barreFond.transform, false);
-        remplissageGO.AddComponent<Image>().color = new Color(0.25f, 0.55f, 0.9f, 1f);
-        _rtRemplissage          = remplissageGO.GetComponent<RectTransform>();
-        _rtRemplissage.anchorMin = Vector2.zero;
-        _rtRemplissage.anchorMax = Vector2.zero;   // commence à 0 de large
-        _rtRemplissage.offsetMin = Vector2.zero;
-        _rtRemplissage.offsetMax = Vector2.zero;
+        GameObject fillGO = new GameObject("Fill");
+        fillGO.transform.SetParent(barBackground.transform, false);
+        fillGO.AddComponent<Image>().color = new Color(0.25f, 0.55f, 0.9f, 1f);
+        _fillRect = fillGO.GetComponent<RectTransform>();
+        _fillRect.anchorMin = Vector2.zero;
+        _fillRect.anchorMax = Vector2.zero;
+        _fillRect.offsetMin = Vector2.zero;
+        _fillRect.offsetMax = Vector2.zero;
 
-        // Texte pourcentage
-        GameObject texteGO = new GameObject("Pourcentage");
-        texteGO.transform.SetParent(canvasGO.transform, false);
-        _texteProgression           = texteGO.AddComponent<TextMeshProUGUI>();
-        _texteProgression.text      = "0%";
-        _texteProgression.fontSize  = 36;
-        _texteProgression.color     = new Color(0.75f, 0.75f, 0.85f, 1f);
-        _texteProgression.alignment = TextAlignmentOptions.Center;
-        _texteProgression.textWrappingMode = TextWrappingModes.NoWrap;
-        RectTransform rtTexte = texteGO.GetComponent<RectTransform>();
-        rtTexte.anchorMin = new Vector2(0.15f, 0.37f);
-        rtTexte.anchorMax = new Vector2(0.85f, 0.44f);
-        rtTexte.offsetMin = Vector2.zero;
-        rtTexte.offsetMax = Vector2.zero;
+        GameObject textGO = new GameObject("Percentage");
+        textGO.transform.SetParent(canvasGO.transform, false);
+        _progressText = textGO.AddComponent<TextMeshProUGUI>();
+        _progressText.text = "0%";
+        _progressText.fontSize = 36;
+        _progressText.color = new Color(0.75f, 0.75f, 0.85f, 1f);
+        _progressText.alignment = TextAlignmentOptions.Center;
+        _progressText.textWrappingMode = TextWrappingModes.NoWrap;
+        RectTransform textRT = textGO.GetComponent<RectTransform>();
+        textRT.anchorMin = new Vector2(0.15f, 0.37f);
+        textRT.anchorMax = new Vector2(0.85f, 0.44f);
+        textRT.offsetMin = Vector2.zero;
+        textRT.offsetMax = Vector2.zero;
     }
 
-    private static void Etirer(RectTransform rt)
+    private static void Stretch(RectTransform rt)
     {
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;

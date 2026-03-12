@@ -3,11 +3,6 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 
-/// <summary>
-/// Interface de rebinding des touches clavier.
-/// Affiche une ligne par action : [Nom de l'action] [Touche actuelle] [Bouton REBIND]
-/// Utilise KeyBindingManager pour persister les bindings via PlayerPrefs.
-/// </summary>
 public class ControlsRebindingUI : MonoBehaviour
 {
     private Transform _container;
@@ -16,20 +11,17 @@ public class ControlsRebindingUI : MonoBehaviour
     {
         public KeyBindingManager.ActionType Action;
         public TextMeshProUGUI KeyDisplay;
-        public Button          RebindButton;
+        public Button RebindButton;
     }
 
     private readonly List<RebindEntry> _entries = new List<RebindEntry>();
-    private RebindEntry _enCours;
-    private float       _timeout;
+    private RebindEntry _currentEntry;
+    private float _timeout;
     private const float TIMEOUT = 5f;
-
-    // ── API publique ──────────────────────────────────────────────────────────
 
     public void SetRebindingContainer(Transform container)
     {
         _container = container;
-        // Étirer le container sur tout son parent
         RectTransform rt = container as RectTransform;
         if (rt != null)
         {
@@ -43,7 +35,6 @@ public class ControlsRebindingUI : MonoBehaviour
 
     public void RefreshUI() => BuildUI();
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     void Start()
     {
         if (_container == null) return;
@@ -52,110 +43,102 @@ public class ControlsRebindingUI : MonoBehaviour
 
     void Update()
     {
-        if (_enCours == null) return;
+        if (_currentEntry == null) return;
 
         _timeout -= Time.unscaledDeltaTime;
-        if (_timeout <= 0f) { AnnulerRebind(); return; }
+        if (_timeout <= 0f) { CancelRebind(); return; }
 
         if (!Input.anyKeyDown) return;
 
         foreach (KeyCode k in System.Enum.GetValues(typeof(KeyCode)))
         {
             if (!Input.GetKeyDown(k)) continue;
-            if (k == KeyCode.Escape || k == KeyCode.Return) { AnnulerRebind(); return; }
-            TerminerRebind(k);
+            if (k == KeyCode.Escape || k == KeyCode.Return) { CancelRebind(); return; }
+            FinishRebind(k);
             return;
         }
     }
 
-    // ── Construction de l'UI ──────────────────────────────────────────────────
     private void BuildUI()
     {
         if (_container == null || KeyBindingManager.Instance == null) return;
 
-        // Vider l'ancien contenu
         foreach (Transform child in _container) Destroy(child.gameObject);
         _entries.Clear();
 
-        // Titre
-        AjouterTitre("TOUCHES CLAVIER — JOUEUR 1");
+        AddTitle("KEYBOARD CONTROLS — PLAYER 1");
 
-        // Une ligne par action
         (KeyBindingManager.ActionType, string)[] actions =
         {
-            (KeyBindingManager.ActionType.Move_Up,    "Haut"),
-            (KeyBindingManager.ActionType.Move_Down,  "Bas"),
-            (KeyBindingManager.ActionType.Move_Left,  "Gauche"),
-            (KeyBindingManager.ActionType.Move_Right, "Droite"),
-            (KeyBindingManager.ActionType.PlaceTower, "Poser tour"),
-            (KeyBindingManager.ActionType.Interact,   "Interagir"),
-            (KeyBindingManager.ActionType.LancerVague,"Lancer vague"),
+            (KeyBindingManager.ActionType.Move_Up,    "Up"),
+            (KeyBindingManager.ActionType.Move_Down,  "Down"),
+            (KeyBindingManager.ActionType.Move_Left,  "Left"),
+            (KeyBindingManager.ActionType.Move_Right, "Right"),
+            (KeyBindingManager.ActionType.PlaceTower, "Place Tower"),
+            (KeyBindingManager.ActionType.Interact,   "Interact"),
+            (KeyBindingManager.ActionType.LaunchWave, "Launch Wave"),
         };
 
         foreach (var (action, label) in actions)
-            AjouterLigne(action, label);
+            AddRow(action, label);
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(_container as RectTransform);
     }
 
-    private void AjouterTitre(string texte)
+    private void AddTitle(string text)
     {
-        GameObject go = new GameObject("Titre");
+        GameObject go = new GameObject("Title");
         go.transform.SetParent(_container, false);
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text      = texte;
-        tmp.fontSize  = 22;
+        tmp.text = text;
+        tmp.fontSize = 22;
         tmp.fontStyle = FontStyles.Bold;
-        tmp.color     = Color.white;
+        tmp.color = Color.white;
         tmp.alignment = TextAlignmentOptions.Left;
         tmp.textWrappingMode = TextWrappingModes.NoWrap;
 
         LayoutElement le = go.AddComponent<LayoutElement>();
         le.preferredHeight = 40;
-        le.flexibleWidth   = 1;
+        le.flexibleWidth = 1;
 
         SetAnchorStretchH(go.GetComponent<RectTransform>());
     }
 
-    private void AjouterLigne(KeyBindingManager.ActionType action, string label)
+    private void AddRow(KeyBindingManager.ActionType action, string label)
     {
-        // Ligne conteneur
         GameObject rowGO = new GameObject($"{action}_Row");
         rowGO.transform.SetParent(_container, false);
 
         HorizontalLayoutGroup hlg = rowGO.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing              = 10;
-        hlg.childForceExpandWidth  = false;
+        hlg.spacing = 10;
+        hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = true;
-        hlg.padding              = new RectOffset(0, 0, 4, 4);
+        hlg.padding = new RectOffset(0, 0, 4, 4);
 
         LayoutElement rowLE = rowGO.AddComponent<LayoutElement>();
         rowLE.preferredHeight = 52;
-        rowLE.flexibleWidth   = 1;   // ← s'étire sur toute la largeur du container
+        rowLE.flexibleWidth = 1;
 
         SetAnchorStretchH(rowGO.GetComponent<RectTransform>());
 
-        // ── Nom de l'action ──────────────────────────────────────────────────
-        TextMeshProUGUI labelTMP = CreerTexte(rowGO, label, 20, TextAlignmentOptions.Left);
+        TextMeshProUGUI labelTMP = CreateText(rowGO, label, 20, TextAlignmentOptions.Left);
         LayoutElement labelLE = labelTMP.gameObject.AddComponent<LayoutElement>();
-        labelLE.flexibleWidth  = 1;   // prend l'espace restant
-        labelLE.minWidth       = 120;
+        labelLE.flexibleWidth = 1;
+        labelLE.minWidth = 120;
 
-        // ── Touche actuelle ──────────────────────────────────────────────────
         GameObject displayGO = new GameObject("Display");
         displayGO.transform.SetParent(rowGO.transform, false);
         displayGO.AddComponent<Image>().color = new Color(0.15f, 0.15f, 0.25f, 1f);
 
         LayoutElement displayLE = displayGO.AddComponent<LayoutElement>();
-        displayLE.minWidth      = 110;
+        displayLE.minWidth = 110;
         displayLE.preferredWidth = 110;
 
         KeyBindingManager.KeyBinding binding = KeyBindingManager.Instance.GetBinding(action);
-        TextMeshProUGUI keyTMP = CreerTexte(displayGO, KeyBindingManager.GetKeyDisplayName(binding.KeyboardKey), 18, TextAlignmentOptions.Center);
+        TextMeshProUGUI keyTMP = CreateText(displayGO, KeyBindingManager.GetKeyDisplayName(binding.KeyboardKey), 18, TextAlignmentOptions.Center);
         SetAnchorStretch(keyTMP.GetComponent<RectTransform>());
 
-        // ── Bouton Rebind ─────────────────────────────────────────────────────
         GameObject btnGO = new GameObject("RebindBtn");
         btnGO.transform.SetParent(rowGO.transform, false);
         btnGO.AddComponent<Image>().color = new Color(0.25f, 0.5f, 0.75f, 1f);
@@ -163,36 +146,34 @@ public class ControlsRebindingUI : MonoBehaviour
         Button btn = btnGO.AddComponent<Button>();
         ColorBlock cb = btn.colors;
         cb.highlightedColor = new Color(0.35f, 0.65f, 0.9f, 1f);
-        cb.pressedColor     = new Color(0.15f, 0.35f, 0.6f, 1f);
+        cb.pressedColor = new Color(0.15f, 0.35f, 0.6f, 1f);
         btn.colors = cb;
 
         LayoutElement btnLE = btnGO.AddComponent<LayoutElement>();
-        btnLE.minWidth      = 90;
+        btnLE.minWidth = 90;
         btnLE.preferredWidth = 90;
 
-        CreerTexte(btnGO, "REBIND", 16, TextAlignmentOptions.Center);
+        CreateText(btnGO, "REBIND", 16, TextAlignmentOptions.Center);
 
-        // Enregistrement
         RebindEntry entry = new RebindEntry
         {
-            Action       = action,
-            KeyDisplay   = keyTMP,
+            Action = action,
+            KeyDisplay = keyTMP,
             RebindButton = btn,
         };
         _entries.Add(entry);
-        btn.onClick.AddListener(() => DemarrerRebind(entry));
+        btn.onClick.AddListener(() => StartRebind(entry));
     }
 
-    // ── Helpers UI ────────────────────────────────────────────────────────────
-    private TextMeshProUGUI CreerTexte(GameObject parent, string texte, float size, TextAlignmentOptions align)
+    private TextMeshProUGUI CreateText(GameObject parent, string text, float size, TextAlignmentOptions align)
     {
         GameObject go = new GameObject("Text");
         go.transform.SetParent(parent.transform, false);
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text      = texte;
-        tmp.fontSize  = size;
-        tmp.color     = Color.white;
+        tmp.text = text;
+        tmp.fontSize = size;
+        tmp.color = Color.white;
         tmp.alignment = align;
         tmp.textWrappingMode = TextWrappingModes.NoWrap;
 
@@ -212,37 +193,36 @@ public class ControlsRebindingUI : MonoBehaviour
     {
         rt.anchorMin = new Vector2(0f, 0.5f);
         rt.anchorMax = new Vector2(1f, 0.5f);
-        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
     }
 
-    // ── Logique de rebinding ──────────────────────────────────────────────────
-    private void DemarrerRebind(RebindEntry entry)
+    private void StartRebind(RebindEntry entry)
     {
         foreach (var e in _entries) e.RebindButton.interactable = false;
-        _enCours = entry;
+        _currentEntry = entry;
         _timeout = TIMEOUT;
         entry.KeyDisplay.text = "...";
     }
 
-    private void TerminerRebind(KeyCode key)
+    private void FinishRebind(KeyCode key)
     {
-        if (_enCours == null) return;
-        KeyBindingManager.Instance.SetBinding(_enCours.Action, key);
-        _enCours.KeyDisplay.text = KeyBindingManager.GetKeyDisplayName(key);
-        FinRebind();
+        if (_currentEntry == null) return;
+        KeyBindingManager.Instance.SetBinding(_currentEntry.Action, key);
+        _currentEntry.KeyDisplay.text = KeyBindingManager.GetKeyDisplayName(key);
+        EndRebind();
     }
 
-    private void AnnulerRebind()
+    private void CancelRebind()
     {
-        if (_enCours == null) return;
-        KeyBindingManager.KeyBinding b = KeyBindingManager.Instance.GetBinding(_enCours.Action);
-        _enCours.KeyDisplay.text = KeyBindingManager.GetKeyDisplayName(b.KeyboardKey);
-        FinRebind();
+        if (_currentEntry == null) return;
+        KeyBindingManager.KeyBinding b = KeyBindingManager.Instance.GetBinding(_currentEntry.Action);
+        _currentEntry.KeyDisplay.text = KeyBindingManager.GetKeyDisplayName(b.KeyboardKey);
+        EndRebind();
     }
 
-    private void FinRebind()
+    private void EndRebind()
     {
-        _enCours = null;
+        _currentEntry = null;
         foreach (var e in _entries) e.RebindButton.interactable = true;
     }
 }

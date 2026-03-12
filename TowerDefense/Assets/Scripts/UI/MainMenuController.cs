@@ -6,7 +6,7 @@ public class MainMenuController : MonoBehaviour
     {
         if (GameManager.Instance == null)
         {
-            Debug.LogError("[MainMenu] GameManager introuvable dans la scène !");
+            Debug.LogError("[MainMenu] GameManager not found in scene!");
             return;
         }
         GameManager.Instance.StartGame();

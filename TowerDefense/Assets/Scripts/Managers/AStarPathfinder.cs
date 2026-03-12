@@ -1,23 +1,12 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-/// <summary>
-/// Algorithme A* maison pour la navigation sur grille 2D.
-///
-/// Implémentation :
-///   - Mouvement 8-directionnel (orthogonal coût 10, diagonal coût 14)
-///   - Heuristique octile (cohérente avec le mouvement diagonal)
-///   - Retourne null si aucun chemin n'existe (chemin bloqué)
-///
-/// Usage : AStarPathfinder.Instance.TrouverChemin(depart, arrivee)
-/// </summary>
 public class AStarPathfinder : MonoBehaviour
 {
-    // ── Singleton ─────────────────────────────────────────────────────────────
     public static AStarPathfinder Instance { get; private set; }
 
-    private const int COUT_ORTHO     = 10;
-    private const int COUT_DIAGONAL  = 14;
+    private const int COST_ORTHO = 10;
+    private const int COST_DIAGONAL = 14;
 
     void Awake()
     {
@@ -25,112 +14,120 @@ public class AStarPathfinder : MonoBehaviour
         Instance = this;
     }
 
-    // ── API publique ──────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Calcule le chemin le plus court entre deux positions monde.
-    /// </summary>
-    /// <returns>
-    /// Liste ordonnée de positions monde à suivre,
-    /// ou null si le chemin est impossible.
-    /// </returns>
-    public List<Vector2> TrouverChemin(Vector2 depart, Vector2 arrivee)
+    public List<Vector2> FindPath(Vector2 start, Vector2 end, int towerPenalty = 0)
     {
-        GridManager grille = GridManager.Instance;
-        if (grille == null) return null;
+        GridManager grid = GridManager.Instance;
+        if (grid == null) return null;
 
-        Node noeudDepart  = grille.MondeVersNoeud(depart);
-        Node noeudArrivee = grille.MondeVersNoeud(arrivee);
+        Node startNode = grid.WorldToNode(start);
+        Node endNode = grid.WorldToNode(end);
 
-        if (noeudDepart == null || noeudArrivee == null) return null;
-        if (!noeudArrivee.walkable) return null;
+        if (startNode == null || endNode == null) return null;
+        if (!endNode.walkable) return null;
 
-        // Réinitialiser les coûts avant la recherche
-        grille.ReinitialisationCouts();
+        Node[] towerNodes = towerPenalty > 0 ? GetTowerNodes(grid) : null;
 
-        List<Node>    openSet   = new List<Node>();
+        grid.ResetCosts();
+
+        List<Node> openSet = new List<Node>();
         HashSet<Node> closedSet = new HashSet<Node>();
 
-        noeudDepart.gCost = 0;
-        noeudDepart.hCost = Heuristique(noeudDepart, noeudArrivee);
-        openSet.Add(noeudDepart);
+        startNode.gCost = 0;
+        startNode.hCost = Heuristic(startNode, endNode);
+        openSet.Add(startNode);
 
         while (openSet.Count > 0)
         {
-            // Sélectionner le noeud avec le fCost minimal
-            Node courant = MeilleurNoeud(openSet);
+            Node current = GetBestNode(openSet);
 
-            if (courant == noeudArrivee)
-                return ReconstruireChemin(noeudArrivee);
+            if (current == endNode)
+                return ReconstructPath(endNode);
 
-            openSet.Remove(courant);
-            closedSet.Add(courant);
+            openSet.Remove(current);
+            closedSet.Add(current);
 
-            foreach (Node voisin in grille.ObtenirVoisins(courant))
+            foreach (Node neighbor in grid.GetNeighbors(current))
             {
-                if (!voisin.walkable || closedSet.Contains(voisin)) continue;
+                if (!neighbor.walkable || closedSet.Contains(neighbor)) continue;
 
-                bool diagonal = voisin.gridX != courant.gridX && voisin.gridY != courant.gridY;
-                int coutMouvement = diagonal ? COUT_DIAGONAL : COUT_ORTHO;
-                int nouveauGCost  = courant.gCost + coutMouvement;
+                bool diagonal = neighbor.gridX != current.gridX && neighbor.gridY != current.gridY;
+                int moveCost = diagonal ? COST_DIAGONAL : COST_ORTHO;
+                int penalty = towerPenalty > 0 ? CalculateTowerPenalty(neighbor, towerNodes, towerPenalty) : 0;
+                int newGCost = current.gCost + moveCost + penalty;
 
-                if (nouveauGCost < voisin.gCost)
+                if (newGCost < neighbor.gCost)
                 {
-                    voisin.gCost  = nouveauGCost;
-                    voisin.hCost  = Heuristique(voisin, noeudArrivee);
-                    voisin.parent = courant;
+                    neighbor.gCost = newGCost;
+                    neighbor.hCost = Heuristic(neighbor, endNode);
+                    neighbor.parent = current;
 
-                    if (!openSet.Contains(voisin))
-                        openSet.Add(voisin);
+                    if (!openSet.Contains(neighbor))
+                        openSet.Add(neighbor);
                 }
             }
         }
 
-        // Aucun chemin trouvé
         return null;
     }
 
-    // ── Fonctions internes ────────────────────────────────────────────────────
-
-    /// <summary>Retourne le noeud avec le fCost le plus bas dans la liste ouverte.</summary>
-    private Node MeilleurNoeud(List<Node> openSet)
+    private Node[] GetTowerNodes(GridManager grid)
     {
-        Node meilleur = openSet[0];
-        for (int i = 1; i < openSet.Count; i++)
-        {
-            if (openSet[i].fCost < meilleur.fCost ||
-               (openSet[i].fCost == meilleur.fCost && openSet[i].hCost < meilleur.hCost))
-            {
-                meilleur = openSet[i];
-            }
-        }
-        return meilleur;
+        Tower[] towers = FindObjectsByType<Tower>(FindObjectsSortMode.None);
+        Node[] nodes = new Node[towers.Length];
+        for (int i = 0; i < towers.Length; i++)
+            nodes[i] = grid.WorldToNode(towers[i].transform.position);
+        return nodes;
     }
 
-    /// <summary>
-    /// Heuristique octile — cohérente avec le mouvement 8-directionnel.
-    /// Formule : 14 * min(dx,dy) + 10 * |dx - dy|
-    /// </summary>
-    private int Heuristique(Node a, Node b)
+    private int CalculateTowerPenalty(Node node, Node[] towerNodes, int penaltyBase)
+    {
+        int extra = 0;
+        foreach (Node tower in towerNodes)
+        {
+            if (tower == null) continue;
+            int dist = Mathf.Max(
+                Mathf.Abs(node.gridX - tower.gridX),
+                Mathf.Abs(node.gridY - tower.gridY)
+            );
+            if (dist <= 1) extra += penaltyBase * 3;
+            else if (dist <= 2) extra += penaltyBase;
+        }
+        return extra;
+    }
+
+    private Node GetBestNode(List<Node> openSet)
+    {
+        Node best = openSet[0];
+        for (int i = 1; i < openSet.Count; i++)
+        {
+            if (openSet[i].fCost < best.fCost ||
+               (openSet[i].fCost == best.fCost && openSet[i].hCost < best.hCost))
+            {
+                best = openSet[i];
+            }
+        }
+        return best;
+    }
+
+    private int Heuristic(Node a, Node b)
     {
         int dx = Mathf.Abs(a.gridX - b.gridX);
         int dy = Mathf.Abs(a.gridY - b.gridY);
-        return COUT_DIAGONAL * Mathf.Min(dx, dy) + COUT_ORTHO * Mathf.Abs(dx - dy);
+        return COST_DIAGONAL * Mathf.Min(dx, dy) + COST_ORTHO * Mathf.Abs(dx - dy);
     }
 
-    /// <summary>Remonte la chaîne de parents pour reconstruire le chemin.</summary>
-    private List<Vector2> ReconstruireChemin(Node arrivee)
+    private List<Vector2> ReconstructPath(Node end)
     {
-        List<Vector2> chemin = new List<Vector2>();
-        Node courant = arrivee;
+        List<Vector2> path = new List<Vector2>();
+        Node current = end;
 
-        while (courant != null)
+        while (current != null)
         {
-            chemin.Add(courant.worldPosition);
-            courant = courant.parent;
+            path.Add(current.worldPosition);
+            current = current.parent;
         }
 
-        chemin.Reverse();
-        return chemin;
+        path.Reverse();
+        return path;
     }
 }

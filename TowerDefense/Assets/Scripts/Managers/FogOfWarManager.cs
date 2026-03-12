@@ -1,42 +1,25 @@
 using UnityEngine;
 
-/// <summary>
-/// Brouillard de guerre basé sur la position des agents (PAS sur la caméra).
-///
-/// Fonctionnement :
-///   - Couvre la map de tuiles sombres (une par cellule 2×2)
-///   - Chaque frame, calcule les zones révélées :
-///       • rayon configurable autour de chaque joueur
-///       • portée de tir de chaque tour
-///       • zone fixe autour de la base centrale
-///   - Anime l'alpha des tuiles en fondu progressif
-///   - Désactive le SpriteRenderer des ennemis dont la cellule est dans le brouillard
-///
-/// Attacher sur un GameObject vide dans la scène Game.
-/// </summary>
 public class FogOfWarManager : MonoBehaviour
 {
     public static FogOfWarManager Instance { get; private set; }
 
-    [Header("Apparence")]
-    [SerializeField] private Color couleurBrouillard = new Color(0.05f, 0.05f, 0.1f, 0.88f);
-    [SerializeField] private float vitesseAnimation  = 4f;   // unités d'alpha par seconde
+    [Header("Appearance")]
+    [SerializeField] private Color fogColor = new Color(0.05f, 0.05f, 0.1f, 0.88f);
+    [SerializeField] private float fadeSpeed = 4f;
 
     [Header("Vision")]
-    [SerializeField] private float rayonJoueur = 5f;
-    [SerializeField] private float rayonBase   = 3f;
+    [SerializeField] private float playerRadius = 5f;
+    [SerializeField] private float baseRadius = 3f;
 
-    // ── Ordres de rendu ───────────────────────────────────────────────────────
-    private const int SORT_BROUILLARD = 10;  // au-dessus des ennemis/tours
-    private const int SORT_JOUEUR     = 15;  // au-dessus du brouillard
+    private const int SORT_FOG = 10;
+    private const int SORT_PLAYER = 15;
 
-    // ── Données internes ──────────────────────────────────────────────────────
-    private SpriteRenderer[,] _tuiles;
-    private float[,]          _alphasCibles;   // 0 = révélé, 1 = sombre
-    private GridManager       _gm;
-    private Sprite            _spriteBloc;
+    private SpriteRenderer[,] _tiles;
+    private float[,] _targetAlphas;
+    private GridManager _grid;
+    private Sprite _blockSprite;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -45,160 +28,139 @@ public class FogOfWarManager : MonoBehaviour
 
     void Start()
     {
-        _gm = GridManager.Instance;
-        if (_gm == null)
-        {
-            Debug.LogWarning("[FogOfWar] GridManager introuvable — brouillard désactivé.");
-            enabled = false;
-            return;
-        }
+        _grid = GridManager.Instance;
+        if (_grid == null) { enabled = false; return; }
 
-        _spriteBloc = CréerSpriteCarré();
-        CréerTuiles();
-        ElevéJoueursAuDessus();
+        _blockSprite = CreateSquareSprite();
+        CreateTiles();
+        ElevatePlayersAboveFog();
     }
 
     void Update()
     {
-        MettreAJourVision();
-        AnimerTuiles();
-        CacherEnnemis();
+        UpdateVision();
+        AnimateTiles();
+        CullEnemies();
     }
 
-    // ── Création des tuiles ───────────────────────────────────────────────────
-    private void CréerTuiles()
+    private void CreateTiles()
     {
-        int   larg   = _gm.Largeur;
-        int   haut   = _gm.Hauteur;
-        float taille = _gm.TailleCellule;
+        int w = _grid.Width;
+        int h = _grid.Height;
+        float size = _grid.CellSize;
 
-        _tuiles       = new SpriteRenderer[larg, haut];
-        _alphasCibles = new float[larg, haut];
+        _tiles = new SpriteRenderer[w, h];
+        _targetAlphas = new float[w, h];
 
-        for (int x = 0; x < larg; x++)
+        for (int x = 0; x < w; x++)
         {
-            for (int y = 0; y < haut; y++)
+            for (int y = 0; y < h; y++)
             {
-                Node noeud = _gm.ObtenirNoeud(x, y);
-                if (noeud == null) continue;
+                Node node = _grid.GetNode(x, y);
+                if (node == null) continue;
 
                 GameObject go = new GameObject($"Fog_{x}_{y}");
                 go.transform.SetParent(transform);
-                go.transform.position   = new Vector3(noeud.worldPosition.x, noeud.worldPosition.y, 0f);
-                go.transform.localScale = new Vector3(taille, taille, 1f);
+                go.transform.position = new Vector3(node.worldPosition.x, node.worldPosition.y, 0f);
+                go.transform.localScale = new Vector3(size, size, 1f);
 
                 SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite       = _spriteBloc;
-                sr.color        = couleurBrouillard;
-                sr.sortingOrder = SORT_BROUILLARD;
+                sr.sprite = _blockSprite;
+                sr.color = fogColor;
+                sr.sortingOrder = SORT_FOG;
 
-                _tuiles[x, y]       = sr;
-                _alphasCibles[x, y] = 1f;   // tout sombre au départ
+                _tiles[x, y] = sr;
+                _targetAlphas[x, y] = 1f;
             }
         }
     }
 
-    /// <summary>Crée un sprite 1×1 px blanc — la couleur vient de SpriteRenderer.color.</summary>
-    private static Sprite CréerSpriteCarré()
+    private static Sprite CreateSquareSprite()
     {
         Texture2D tex = new Texture2D(1, 1);
         tex.SetPixel(0, 0, Color.white);
         tex.Apply();
-        // PPU=1 → sprite 1 unité monde, le localScale 2×2 du Transform l'agrandit
         return Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
     }
 
-    // ── Mise à jour de la vision ──────────────────────────────────────────────
-    private void MettreAJourVision()
+    private void UpdateVision()
     {
-        int larg = _gm.Largeur;
-        int haut = _gm.Hauteur;
+        int w = _grid.Width;
+        int h = _grid.Height;
 
-        // Tout mettre à sombre
-        for (int x = 0; x < larg; x++)
-            for (int y = 0; y < haut; y++)
-                _alphasCibles[x, y] = 1f;
+        for (int x = 0; x < w; x++)
+            for (int y = 0; y < h; y++)
+                _targetAlphas[x, y] = 1f;
 
-        // Révéler autour des joueurs
-        foreach (PlayerController joueur in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
-            RévélerAutourDe(joueur.transform.position, rayonJoueur);
+        foreach (PlayerController player in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
+            RevealAround(player.transform.position, playerRadius);
 
-        // Révéler autour des tours (rayon = portée de tir)
-        foreach (Tower tour in FindObjectsByType<Tower>(FindObjectsSortMode.None))
-            RévélerAutourDe(tour.transform.position, tour.portee);
+        foreach (Tower tower in FindObjectsByType<Tower>(FindObjectsSortMode.None))
+            RevealAround(tower.transform.position, tower.range);
 
-        // Révéler autour de la base centrale
         GameObject baseObj = GameObject.FindWithTag("Base");
-        if (baseObj != null) RévélerAutourDe(baseObj.transform.position, rayonBase);
+        if (baseObj != null) RevealAround(baseObj.transform.position, baseRadius);
     }
 
-    private void RévélerAutourDe(Vector2 centre, float rayon)
+    private void RevealAround(Vector2 center, float radius)
     {
-        int   larg    = _gm.Largeur;
-        int   haut    = _gm.Hauteur;
-        float rayonSq = rayon * rayon;
+        float radiusSq = radius * radius;
 
-        for (int x = 0; x < larg; x++)
+        for (int x = 0; x < _grid.Width; x++)
         {
-            for (int y = 0; y < haut; y++)
+            for (int y = 0; y < _grid.Height; y++)
             {
-                Node noeud = _gm.ObtenirNoeud(x, y);
-                if (noeud == null) continue;
+                Node node = _grid.GetNode(x, y);
+                if (node == null) continue;
 
-                if ((noeud.worldPosition - centre).sqrMagnitude <= rayonSq)
-                    _alphasCibles[x, y] = 0f;
+                if ((node.worldPosition - center).sqrMagnitude <= radiusSq)
+                    _targetAlphas[x, y] = 0f;
             }
         }
     }
 
-    // ── Animation des tuiles ──────────────────────────────────────────────────
-    private void AnimerTuiles()
+    private void AnimateTiles()
     {
-        int   larg    = _gm.Largeur;
-        int   haut    = _gm.Hauteur;
-        float step    = vitesseAnimation * Time.deltaTime;
-        float alphaMax = couleurBrouillard.a;
+        float step = fadeSpeed * Time.deltaTime;
+        float alphaMax = fogColor.a;
 
-        for (int x = 0; x < larg; x++)
+        for (int x = 0; x < _grid.Width; x++)
         {
-            for (int y = 0; y < haut; y++)
+            for (int y = 0; y < _grid.Height; y++)
             {
-                SpriteRenderer sr = _tuiles[x, y];
+                SpriteRenderer sr = _tiles[x, y];
                 if (sr == null) continue;
 
                 Color c = sr.color;
-                c.a      = Mathf.MoveTowards(c.a, _alphasCibles[x, y] * alphaMax, step);
+                c.a = Mathf.MoveTowards(c.a, _targetAlphas[x, y] * alphaMax, step);
                 sr.color = c;
             }
         }
     }
 
-    // ── Culling logique des ennemis ───────────────────────────────────────────
-    private void CacherEnnemis()
+    private void CullEnemies()
     {
-        foreach (EnemyAI ennemi in FindObjectsByType<EnemyAI>(FindObjectsSortMode.None))
+        foreach (EnemyAI enemy in FindObjectsByType<EnemyAI>(FindObjectsSortMode.None))
         {
-            bool révélé = EstCelluleRévélée(ennemi.transform.position);
-            SpriteRenderer sr = ennemi.GetComponent<SpriteRenderer>();
-            if (sr != null) sr.enabled = révélé;
+            bool revealed = IsCellRevealed(enemy.transform.position);
+            SpriteRenderer sr = enemy.GetComponent<SpriteRenderer>();
+            if (sr != null) sr.enabled = revealed;
         }
     }
 
-    /// <summary>Retourne true si la cellule à cette position monde est révélée.</summary>
-    public bool EstCelluleRévélée(Vector2 positionMonde)
+    public bool IsCellRevealed(Vector2 worldPos)
     {
-        Node noeud = _gm.MondeVersNoeud(positionMonde);
-        if (noeud == null) return false;
-        return _alphasCibles[noeud.gridX, noeud.gridY] < 0.5f;
+        Node node = _grid.WorldToNode(worldPos);
+        if (node == null) return false;
+        return _targetAlphas[node.gridX, node.gridY] < 0.5f;
     }
 
-    // ── Joueurs toujours visibles au-dessus du brouillard ─────────────────────
-    private void ElevéJoueursAuDessus()
+    private void ElevatePlayersAboveFog()
     {
-        foreach (PlayerController joueur in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
+        foreach (PlayerController player in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
         {
-            SpriteRenderer sr = joueur.GetComponent<SpriteRenderer>();
-            if (sr != null) sr.sortingOrder = SORT_JOUEUR;
+            SpriteRenderer sr = player.GetComponent<SpriteRenderer>();
+            if (sr != null) sr.sortingOrder = SORT_PLAYER;
         }
     }
 }

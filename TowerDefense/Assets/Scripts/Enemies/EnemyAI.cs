@@ -2,180 +2,148 @@ using UnityEngine;
 using System.Collections.Generic;
 using System;
 
-/// <summary>
-/// Comportement d'un ennemi :
-///   - Calcule son chemin vers la base via A*
-///   - Suit le chemin waypoint par waypoint
-///   - Recalcule son chemin quand une tour est posée (GridManager.OnGrilleModifiee)
-///   - Inflige des dégâts à la base à l'arrivée, puis se détruit
-///   - Peut prendre des dégâts des tours
-///
-/// Types disponibles (configurés sur le prefab) :
-///   Rush    — rapide, fragile, fonce droit au but
-///   Tank    — lent, très résistant, dégâts élevés à la base
-///   Flanker — vitesse moyenne, évite les tours (A* pondéré, à venir)
-///
-/// Requis sur le prefab : Rigidbody2D (Kinematic), Collider2D (Trigger)
-/// Le GameObject de la base doit avoir le tag "Base".
-/// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class EnemyAI : MonoBehaviour
 {
-    // ── Type d'ennemi ─────────────────────────────────────────────────────────
     public enum EnemyType { Rush, Tank, Flanker }
 
     [Header("Type")]
     [SerializeField] public EnemyType type = EnemyType.Rush;
 
-    // ── Inspector (écrasé par ConfigurerSelonType) ────────────────────────────
-    [Header("Stats de base")]
-    [SerializeField] private float vitesse    = 2f;
-    [SerializeField] private int   pvMax      = 3;
-    [SerializeField] private int   degatsBase = 1;
+    [Header("Base Stats")]
+    [SerializeField] private float speed = 2f;
+    [SerializeField] private int maxHP = 3;
+    [SerializeField] private int baseDamage = 1;
 
     [Header("Navigation")]
-    [Tooltip("Distance minimale pour valider l'atteinte d'un waypoint.")]
-    [SerializeField] private float toleranceWaypoint = 0.15f;
+    [SerializeField] private float waypointTolerance = 0.15f;
 
-    // ── Événement ─────────────────────────────────────────────────────────────
-    /// <summary>Déclenché à la mort d'un ennemi (WaveManager l'écoute).</summary>
-    public static event Action OnEnnemiMort;
+    public static event Action OnEnemyDied;
 
-    // ── État interne ──────────────────────────────────────────────────────────
-    private int            _pvActuels;
-    private int            _recompenseOr;
-    private List<Vector2>  _chemin;
-    private int            _indexWaypoint;
-    private Transform      _cibleBase;
-    private bool           _arrivee;
+    private int _currentHP;
+    private int _goldReward;
+    private List<Vector2> _path;
+    private int _waypointIndex;
+    private Transform _baseTarget;
+    private bool _arrived;
 
-    public int IndexWaypoint => _indexWaypoint;
+    public int WaypointIndex => _waypointIndex;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     void Awake()
     {
-        ConfigurerSelonType();
-        _pvActuels = pvMax;
+        ConfigureByType();
+        _currentHP = maxHP;
     }
 
     void Start()
     {
         GameObject baseObj = GameObject.FindWithTag("Base");
         if (baseObj != null)
-            _cibleBase = baseObj.transform;
+            _baseTarget = baseObj.transform;
         else
-            Debug.LogWarning("[EnemyAI] Aucun GameObject taggé 'Base' trouvé !");
+            Debug.LogWarning("[EnemyAI] No GameObject tagged 'Base' found!");
 
-        CalculerChemin();
-        GridManager.OnGrilleModifiee += CalculerChemin;
+        RecalculatePath();
+        GridManager.OnGridUpdated += RecalculatePath;
     }
 
     void OnDestroy()
     {
-        GridManager.OnGrilleModifiee -= CalculerChemin;
+        GridManager.OnGridUpdated -= RecalculatePath;
     }
 
     void Update()
     {
-        if (_arrivee) return;
+        if (_arrived) return;
         if (GameManager.Instance?.CurrentState != GameManager.GameState.Defense) return;
-        SuivreChemin();
+        FollowPath();
     }
 
-    // ── Configuration par type ────────────────────────────────────────────────
-    private void ConfigurerSelonType()
+    private void ConfigureByType()
     {
         switch (type)
         {
             case EnemyType.Rush:
-                vitesse       = 3.5f;
-                pvMax         = 2;
-                degatsBase    = 1;
-                _recompenseOr = 10;
+                speed = 3.5f;
+                maxHP = 2;
+                baseDamage = 1;
+                _goldReward = 10;
                 break;
-
             case EnemyType.Tank:
-                vitesse       = 1f;
-                pvMax         = 10;
-                degatsBase    = 3;
-                _recompenseOr = 25;
+                speed = 1f;
+                maxHP = 10;
+                baseDamage = 3;
+                _goldReward = 25;
                 break;
-
             case EnemyType.Flanker:
-                vitesse       = 2.5f;
-                pvMax         = 4;
-                degatsBase    = 1;
-                _recompenseOr = 15;
+                speed = 2.5f;
+                maxHP = 4;
+                baseDamage = 1;
+                _goldReward = 15;
                 break;
         }
-
-        // Sprites différents par type — pas de teinte supplémentaire nécessaire
     }
 
-    // ── Navigation ────────────────────────────────────────────────────────────
-    public void CalculerChemin()
+    public void RecalculatePath()
     {
-        if (_cibleBase == null || AStarPathfinder.Instance == null) return;
+        if (_baseTarget == null || AStarPathfinder.Instance == null) return;
 
-        List<Vector2> nouveauChemin = AStarPathfinder.Instance.TrouverChemin(
+        int penalty = type == EnemyType.Flanker ? 50 : 0;
+
+        List<Vector2> newPath = AStarPathfinder.Instance.FindPath(
             transform.position,
-            _cibleBase.position
+            _baseTarget.position,
+            penalty
         );
 
-        if (nouveauChemin != null)
+        if (newPath != null)
         {
-            _chemin        = nouveauChemin;
-            _indexWaypoint = 0;
+            _path = newPath;
+            _waypointIndex = 0;
         }
         else
         {
-            Debug.LogWarning($"[EnemyAI] {gameObject.name} : chemin bloqué !");
+            Debug.LogWarning($"[EnemyAI] {gameObject.name}: path blocked!");
         }
     }
 
-    private void SuivreChemin()
+    private void FollowPath()
     {
-        if (_chemin == null || _indexWaypoint >= _chemin.Count) return;
+        if (_path == null || _waypointIndex >= _path.Count) return;
 
-        Vector2 destination = _chemin[_indexWaypoint];
-        transform.position  = Vector2.MoveTowards(
-            transform.position,
-            destination,
-            vitesse * Time.deltaTime
-        );
+        Vector2 destination = _path[_waypointIndex];
+        transform.position = Vector2.MoveTowards(transform.position, destination, speed * Time.deltaTime);
 
-        if (Vector2.Distance(transform.position, destination) < toleranceWaypoint)
-            _indexWaypoint++;
+        if (Vector2.Distance(transform.position, destination) < waypointTolerance)
+            _waypointIndex++;
     }
 
-    // ── Collisions ────────────────────────────────────────────────────────────
     void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Base"))
         {
-            _arrivee = true;
-            other.GetComponent<BaseController>()?.PrendreDegats(degatsBase);
-            Mourir();
+            _arrived = true;
+            other.GetComponent<BaseController>()?.TakeDamage(baseDamage);
+            Die();
         }
     }
 
-    // ── Dégâts ────────────────────────────────────────────────────────────────
-    public void PrendreDegats(int degats)
+    public void TakeDamage(int damage)
     {
-        _pvActuels -= degats;
-        if (_pvActuels <= 0)
-            Mourir();
+        _currentHP -= damage;
+        if (_currentHP <= 0)
+            Die();
     }
 
-    private void Mourir()
+    private void Die()
     {
         if (ResourceManager.Instance != null)
         {
-            ResourceManager.Instance.Ajouter(1, _recompenseOr);
-            ResourceManager.Instance.Ajouter(2, _recompenseOr);
+            ResourceManager.Instance.Add(1, _goldReward);
+            ResourceManager.Instance.Add(2, _goldReward);
         }
 
-        OnEnnemiMort?.Invoke();
+        OnEnemyDied?.Invoke();
         Destroy(gameObject);
     }
 }

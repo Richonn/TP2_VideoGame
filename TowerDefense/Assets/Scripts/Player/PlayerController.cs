@@ -3,13 +3,11 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
 {
-    [Header("Paramètres")]
-    [Tooltip("1 = clavier (ZQSD), 2 = manette Switch.")]
+    [Header("Settings")]
     public int playerNumber = 1;
     public float moveSpeed = 5f;
 
-    [Header("Limites de la demi-map")]
-    [Tooltip("Bornes à configurer selon la moitié de map du joueur.")]
+    [Header("Movement Bounds")]
     public float minX = -20f;
     public float maxX = 20f;
     public float minY = -10f;
@@ -27,48 +25,34 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        if (InputManager.Instance == null)
-        {
-            Debug.LogWarning($"[Joueur {playerNumber}] InputManager.Instance est NULL !");
-            return;
-        }
+        if (InputManager.Instance == null) return;
 
         _input = InputManager.Instance.GetInput(playerNumber);
 
-        if (_input.PlaceTowerPressed)
-            OnPlaceTower();
-
-        if (_input.InteractPressed)
-            OnInteract();
+        if (_input.PlaceTowerPressed) OnPlaceTower();
+        if (_input.InteractPressed) OnInteract();
     }
 
     void FixedUpdate()
     {
-        Deplacer();
+        Move();
     }
 
-    private void Deplacer()
+    private void Move()
     {
-        // _animator.SetBool("isRunning", true); > FIX when player stop running
-        Vector2 nouvellePos = _rb.position
-            + _input.MoveDirection * moveSpeed * Time.fixedDeltaTime;
-
-        nouvellePos.x = Mathf.Clamp(nouvellePos.x, minX, maxX);
-        nouvellePos.y = Mathf.Clamp(nouvellePos.y, minY, maxY);
-
-        _rb.MovePosition(nouvellePos);
-
+        Vector2 newPos = _rb.position + _input.MoveDirection * moveSpeed * Time.fixedDeltaTime;
+        newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
+        newPos.y = Mathf.Clamp(newPos.y, minY, maxY);
+        _rb.MovePosition(newPos);
     }
 
     private void OnPlaceTower()
     {
-        // TODO: déclencher le placement de tour (TowerPlacementManager)
-        Debug.Log($"[Joueur {playerNumber}] Placer une tour en {transform.position}");
+        Debug.Log($"[Player {playerNumber}] Place tower at {transform.position}");
     }
 
     private void OnInteract()
     {
-        // TODO: améliorer / vendre la tour sous le curseur
-        Debug.Log($"[Joueur {playerNumber}] Interagir");
+        Debug.Log($"[Player {playerNumber}] Interact");
     }
 }

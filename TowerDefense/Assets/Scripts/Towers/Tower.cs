@@ -1,20 +1,15 @@
 using UnityEngine;
 
-/// <summary>
-/// Tour placée sur la grille.
-/// Détecte les ennemis dans sa portée et leur inflige des dégâts
-/// à intervalle régulier pendant la phase de défense.
-/// </summary>
 public class Tower : MonoBehaviour
 {
     [Header("Stats")]
-    public int  cout        = 50;
-    public float portee     = 3f;
-    public int   degats     = 2;
-    public float cadence    = 1f;   // tirs par seconde
+    public int cost = 50;
+    public float range = 3f;
+    public int damage = 2;
+    public float fireRate = 1f;
 
-    [Header("Ciblage")]
-    [SerializeField] private LayerMask layerEnnemis;
+    [Header("Targeting")]
+    [SerializeField] private LayerMask enemyLayer;
 
     private float _timer;
 
@@ -23,38 +18,37 @@ public class Tower : MonoBehaviour
         if (GameManager.Instance?.CurrentState != GameManager.GameState.Defense) return;
 
         _timer += Time.deltaTime;
-        if (_timer >= 1f / cadence)
+        if (_timer >= 1f / fireRate)
         {
             _timer = 0f;
-            TirerSurEnnemi();
+            ShootAtEnemy();
         }
     }
 
-    private void TirerSurEnnemi()
+    private void ShootAtEnemy()
     {
-        Collider2D[] ennemis = Physics2D.OverlapCircleAll(transform.position, portee, layerEnnemis);
-        if (ennemis.Length == 0) return;
+        Collider2D[] enemies = Physics2D.OverlapCircleAll(transform.position, range, enemyLayer);
+        if (enemies.Length == 0) return;
 
-        // Cibler l'ennemi le plus avancé (index waypoint le plus élevé)
-        EnemyAI cible = null;
+        EnemyAI target = null;
         int maxWaypoint = -1;
 
-        foreach (Collider2D col in ennemis)
+        foreach (Collider2D col in enemies)
         {
             EnemyAI ai = col.GetComponent<EnemyAI>();
-            if (ai != null && ai.IndexWaypoint > maxWaypoint)
+            if (ai != null && ai.WaypointIndex > maxWaypoint)
             {
-                maxWaypoint = ai.IndexWaypoint;
-                cible = ai;
+                maxWaypoint = ai.WaypointIndex;
+                target = ai;
             }
         }
 
-        cible?.PrendreDegats(degats);
+        target?.TakeDamage(damage);
     }
 
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, portee);
+        Gizmos.DrawWireSphere(transform.position, range);
     }
 }

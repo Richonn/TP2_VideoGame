@@ -1,23 +1,12 @@
 using UnityEngine;
 
-/// <summary>
-/// Pendant la phase de préparation, n'importe quel joueur peut maintenir
-/// sa touche "LancerVague" (Espace / buttonEast) pour démarrer la défense.
-///
-/// Une barre de progression se charge pendant <dureeTenue> secondes.
-/// Si le joueur relâche avant, la barre se vide.
-///
-/// Placer ce script dans la scène Game sur un GameObject dédié.
-/// </summary>
 public class ReadySystem : MonoBehaviour
 {
-    [Tooltip("Durée de maintien nécessaire pour lancer la vague (secondes).")]
-    [SerializeField] private float dureeTenue = 1.5f;
+    [SerializeField] private float holdDuration = 1.5f;
 
-    // Progression actuelle exposée au HUD (0..1)
     public float Progression { get; private set; }
 
-    private float _tempsMaintienu;
+    private float _heldTime;
 
     void Update()
     {
@@ -25,30 +14,28 @@ public class ReadySystem : MonoBehaviour
         if (GameManager.Instance.CurrentState != GameManager.GameState.Preparation) return;
         if (InputManager.Instance == null) return;
 
-        bool appuye = InputManager.Instance.GetInput(1).LancerVagueHeld
-                   || InputManager.Instance.GetInput(2).LancerVagueHeld;
+        bool held = InputManager.Instance.GetInput(1).LaunchWaveHeld
+                 || InputManager.Instance.GetInput(2).LaunchWaveHeld;
 
-        if (appuye)
+        if (held)
         {
-            _tempsMaintienu += Time.deltaTime;
-            Progression = Mathf.Clamp01(_tempsMaintienu / dureeTenue);
+            _heldTime += Time.deltaTime;
+            Progression = Mathf.Clamp01(_heldTime / holdDuration);
 
-            if (_tempsMaintienu >= dureeTenue)
-                LancerDefense();
+            if (_heldTime >= holdDuration)
+                LaunchDefense();
         }
         else
         {
-            // Relâché : vider progressivement (2x plus vite)
-            _tempsMaintienu = Mathf.Max(0f, _tempsMaintienu - Time.deltaTime * 2f);
-            Progression = Mathf.Clamp01(_tempsMaintienu / dureeTenue);
+            _heldTime = Mathf.Max(0f, _heldTime - Time.deltaTime * 2f);
+            Progression = Mathf.Clamp01(_heldTime / holdDuration);
         }
     }
 
-    private void LancerDefense()
+    private void LaunchDefense()
     {
-        _tempsMaintienu = 0f;
+        _heldTime = 0f;
         Progression = 0f;
-        Debug.Log("[ReadySystem] Lancement de la vague !");
         GameManager.Instance.EnterDefensePhase();
     }
 }

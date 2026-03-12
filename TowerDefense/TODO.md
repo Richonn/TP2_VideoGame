@@ -94,7 +94,8 @@
   > Récompense or distribuée aux deux joueurs à la mort via `ResourceManager`
 - [x] Au moins deux niveaux de difficulté
   > ✅ `WaveManager.cs` — distribution progressive : Rush (v1-2), Rush+Tank (v3-4), Rush+Tank+Flanker (v5+)
-- [ ] Flanker : contournement actif des tours (A* pondéré — à implémenter)
+- [x] Flanker : contournement actif des tours (A* pondéré)
+  > ✅ `AStarPathfinder.FindPath(towerPenalty)` — Flanker passe penalty=50, cellules proches des tours coûtent plus cher (Chebyshev dist ≤1 : ×3, dist ≤2 : ×1)
 - [ ] La planification ne présente pas de bugs majeurs
 - [ ] Analyse dans le rapport
 
@@ -174,7 +175,7 @@
 | Culling | Brouillard de guerre basé sur position des agents |
 | Multijoueur | Local, deux contrôleurs physiques séparés |
 | Vue | Top-down 2D |
-| Map | Divisée en deux moitiés symétriques — 40×20 unités, cellules 2×2 |
+| Map | Divisée en deux moitiés symétriques — 200×200 unités (−100 à 100), grille recommandée 50×50 cellules, cellSize=0.5 |
 | Tours | Bloc 2×2 cellules, portée visible (cercle pointillé), layer Obstacles (détection grille) |
 | Base | Centrale, partagée entre les deux joueurs — layer Default (pas Obstacles, sinon A* bloqué) |
 | Ennemis | Layer Enemies ou Default — PAS Obstacles (évite de bloquer la grille) |

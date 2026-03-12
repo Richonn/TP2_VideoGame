@@ -4,10 +4,10 @@ public class CameraFollow : MonoBehaviour
 {
     [SerializeField] private Transform target;
 
-    [Tooltip("Vitesse de suivi (plus grand = plus collé).")]
+    [Tooltip("Follow speed (higher = tighter).")]
     [SerializeField] private float smoothSpeed = 8f;
 
-    [Tooltip("Décalage Z de la caméra (doit rester négatif en 2D).")]
+    [Tooltip("Camera Z offset (must stay negative in 2D).")]
     [SerializeField] private float zOffset = -10f;
 
     void LateUpdate()

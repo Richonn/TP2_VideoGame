@@ -1,49 +1,33 @@
 using UnityEngine;
 using System;
 
-/// <summary>
-/// Base centrale partagée par les deux joueurs.
-///
-/// Setup Unity :
-///   - Tag : "Base"
-///   - Collider2D (Trigger) pour détecter les ennemis
-///
-/// Les ennemis (EnemyAI) appellent PrendreDegats() à l'arrivée.
-/// Quand les PV tombent à 0, déclenche GameOver (défaite).
-/// </summary>
 public class BaseController : MonoBehaviour
 {
-    // ── Événement (HUD l'écoute) ──────────────────────────────────────────────
-    public static event Action<int, int> OnPVChanges;   // (pvActuels, pvMax)
+    public static event Action<int, int> OnHPChanged;
 
-    // ── Inspector ─────────────────────────────────────────────────────────────
-    [SerializeField] private int pvMax = 20;
+    [SerializeField] private int maxHP = 20;
 
-    // ── État ──────────────────────────────────────────────────────────────────
-    public int PVActuels  { get; private set; }
-    public int PVMax      => pvMax;
-    public float RatioPV  => (float)PVActuels / pvMax;
+    public int CurrentHP { get; private set; }
+    public int MaxHP => maxHP;
+    public float HPRatio => (float)CurrentHP / maxHP;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     void Awake()
     {
-        PVActuels = pvMax;
+        CurrentHP = maxHP;
     }
 
-    // ── Dégâts ────────────────────────────────────────────────────────────────
-    public void PrendreDegats(int degats)
+    public void TakeDamage(int damage)
     {
-        PVActuels = Mathf.Max(0, PVActuels - degats);
-        OnPVChanges?.Invoke(PVActuels, pvMax);
+        CurrentHP = Mathf.Max(0, CurrentHP - damage);
+        OnHPChanged?.Invoke(CurrentHP, maxHP);
 
-        if (PVActuels <= 0)
+        if (CurrentHP <= 0)
             GameManager.Instance?.TriggerGameOver(false);
     }
 
-    /// <summary>Soigner la base (utile pour debug ou power-up futur).</summary>
-    public void Soigner(int soin)
+    public void Heal(int amount)
     {
-        PVActuels = Mathf.Min(pvMax, PVActuels + soin);
-        OnPVChanges?.Invoke(PVActuels, pvMax);
+        CurrentHP = Mathf.Min(maxHP, CurrentHP + amount);
+        OnHPChanged?.Invoke(CurrentHP, maxHP);
     }
 }

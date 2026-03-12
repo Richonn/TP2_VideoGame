@@ -1,86 +1,61 @@
 using UnityEngine;
 
-/// <summary>
-/// Affiche un quadrillage sur la map via des LineRenderers.
-/// 21 lignes verticales + 11 lignes horizontales = 32 objets au lieu de 200 sprites.
-///
-/// Attacher sur n'importe quel GameObject de la scène Game.
-/// Dépend de GridManager (doit être présent dans la scène).
-/// </summary>
 public class GridOverlay : MonoBehaviour
 {
-    [Header("Apparence")]
-    [SerializeField] private Color couleur      = new Color(1f, 1f, 1f, 0.15f);
-    [SerializeField] private float epaisseur    = 0.03f;
-    [SerializeField] private int   sortingOrder = 1;
+    [Header("Appearance")]
+    [SerializeField] private Color color = new Color(1f, 1f, 1f, 0.15f);
+    [SerializeField] private float thickness = 0.03f;
+    [SerializeField] private int sortingOrder = 1;
 
     void Start()
     {
-        if (GridManager.Instance == null)
-        {
-            Debug.LogWarning("[GridOverlay] GridManager introuvable.");
-            return;
-        }
-        GenererGrille();
+        if (GridManager.Instance == null) return;
+        GenerateGrid();
     }
 
-    private void GenererGrille()
+    private void GenerateGrid()
     {
-        GridManager gm     = GridManager.Instance;
-        float       taille = gm.TailleCellule;
-        float       demi   = taille * 0.5f;
+        GridManager gm = GridManager.Instance;
+        float size = gm.CellSize;
+        float half = size * 0.5f;
 
-        Node coin = gm.ObtenirNoeud(0, 0);
-        if (coin == null) return;
+        Node corner = gm.GetNode(0, 0);
+        if (corner == null) return;
 
-        // Coin bas-gauche de la grille
-        Vector2 origine = coin.worldPosition - new Vector2(demi, demi);
-        float   largeur = gm.Largeur * taille;
-        float   hauteur = gm.Hauteur * taille;
+        Vector2 origin = corner.worldPosition - new Vector2(half, half);
+        float gridWidth = gm.Width * size;
+        float gridHeight = gm.Height * size;
 
-        // Lignes verticales (Largeur + 1)
-        for (int x = 0; x <= gm.Largeur; x++)
+        for (int x = 0; x <= gm.Width; x++)
         {
-            float px = origine.x + x * taille;
-            CréerLigne(
-                new Vector3(px, origine.y, 0f),
-                new Vector3(px, origine.y + hauteur, 0f),
-                $"VLine_{x}"
-            );
+            float px = origin.x + x * size;
+            CreateLine(new Vector3(px, origin.y, 0f), new Vector3(px, origin.y + gridHeight, 0f), $"VLine_{x}");
         }
 
-        // Lignes horizontales (Hauteur + 1)
-        for (int y = 0; y <= gm.Hauteur; y++)
+        for (int y = 0; y <= gm.Height; y++)
         {
-            float py = origine.y + y * taille;
-            CréerLigne(
-                new Vector3(origine.x, py, 0f),
-                new Vector3(origine.x + largeur, py, 0f),
-                $"HLine_{y}"
-            );
+            float py = origin.y + y * size;
+            CreateLine(new Vector3(origin.x, py, 0f), new Vector3(origin.x + gridWidth, py, 0f), $"HLine_{y}");
         }
     }
 
-    private void CréerLigne(Vector3 debut, Vector3 fin, string nom)
+    private void CreateLine(Vector3 start, Vector3 end, string name)
     {
-        GameObject go = new GameObject(nom);
+        GameObject go = new GameObject(name);
         go.transform.SetParent(transform);
 
         LineRenderer lr = go.AddComponent<LineRenderer>();
-        lr.positionCount    = 2;
-        lr.SetPosition(0, debut);
-        lr.SetPosition(1, fin);
-
-        lr.startColor         = couleur;
-        lr.endColor           = couleur;
-        lr.startWidth         = epaisseur;
-        lr.endWidth           = epaisseur;
-        lr.useWorldSpace      = true;
-        lr.sortingLayerName   = "Grid Overlay";
-        lr.sortingOrder       = sortingOrder;
-
-        // Matériau sans texture — couleur unie
+        lr.positionCount = 2;
+        lr.SetPosition(0, start);
+        lr.SetPosition(1, end);
+        lr.startColor = color;
+        lr.endColor = color;
+        lr.startWidth = thickness;
+        lr.endWidth = thickness;
+        lr.useWorldSpace = true;
+        lr.sortingLayerName = "Grid Overlay";
+        lr.sortingOrder = sortingOrder;
         lr.material = new Material(Shader.Find("Sprites/Default"));
-        lr.material.color = couleur;
+        lr.material.color = color;
     }
 }

@@ -2,136 +2,111 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Met à jour tous les éléments du HUD en réponse aux événements du jeu.
-/// Aucune logique de jeu ici — uniquement de l'affichage.
-///
-/// Assigner les références dans l'Inspector.
-/// </summary>
 public class HUDManager : MonoBehaviour
 {
-    [Header("HUD Joueur 1 (gauche)")]
-    [SerializeField] private TMP_Text texteRessourcesP1;
-    [SerializeField] private Image    barreReadyP1;       // Image type=Filled
+    [Header("Player 1 HUD")]
+    [SerializeField] private TMP_Text p1ResourceText;
+    [SerializeField] private Image p1ReadyBar;
 
-    [Header("HUD Joueur 2 (droite)")]
-    [SerializeField] private TMP_Text texteRessourcesP2;
-    [SerializeField] private Image    barreReadyP2;       // Image type=Filled
+    [Header("Player 2 HUD")]
+    [SerializeField] private TMP_Text p2ResourceText;
+    [SerializeField] private Image p2ReadyBar;
 
-    [Header("HUD Partagé (centre)")]
-    [SerializeField] private TMP_Text texteVague;
-    [SerializeField] private TMP_Text texteTimer;
-    [SerializeField] private TMP_Text textePhase;
-    [SerializeField] private Image imagePhase;
-    // [SerializeField] private Slider   sliderBaseHP;
-    [SerializeField] private Image baseHP;       // Image type=Filled
+    [Header("Shared HUD")]
+    [SerializeField] private TMP_Text waveText;
+    [SerializeField] private TMP_Text timerText;
+    [SerializeField] private TMP_Text phaseText;
+    [SerializeField] private Image phaseImage;
+    [SerializeField] private Image baseHPBar;
     public Sprite prepSprite;
     public Sprite defenseSprite;
 
-    [Header("Références")]
+    [Header("References")]
     [SerializeField] private ReadySystem readySystem;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     void OnEnable()
     {
-        GameManager.OnPhaseChanged      += OnPhaseChanged;
-        GameManager.OnWaveChanged       += OnWaveChanged;
-        GameManager.OnPrepTimerUpdated  += OnTimerUpdated;
-        BaseController.OnPVChanges      += OnPVChanges;
-        ResourceManager.OnRessourcesChangees += OnRessourcesChangees;
+        GameManager.OnPhaseChanged += OnPhaseChanged;
+        GameManager.OnWaveChanged += OnWaveChanged;
+        GameManager.OnPrepTimerUpdated += OnTimerUpdated;
+        BaseController.OnHPChanged += OnHPChanged;
+        ResourceManager.OnResourcesChanged += OnResourcesChanged;
     }
 
     void Start()
     {
-        // Initialiser le HUD avec les valeurs actuelles des managers
         if (ResourceManager.Instance != null)
         {
-            OnRessourcesChangees(1, ResourceManager.Instance.GetRessources(1));
-            OnRessourcesChangees(2, ResourceManager.Instance.GetRessources(2));
+            OnResourcesChanged(1, ResourceManager.Instance.GetResources(1));
+            OnResourcesChanged(2, ResourceManager.Instance.GetResources(2));
         }
 
         BaseController base_ = FindFirstObjectByType<BaseController>();
         if (base_ != null)
-            OnPVChanges(base_.PVActuels, base_.PVMax);
+            OnHPChanged(base_.CurrentHP, base_.MaxHP);
     }
 
     void OnDisable()
     {
-        GameManager.OnPhaseChanged      -= OnPhaseChanged;
-        GameManager.OnWaveChanged       -= OnWaveChanged;
-        GameManager.OnPrepTimerUpdated  -= OnTimerUpdated;
-        BaseController.OnPVChanges      -= OnPVChanges;
-        ResourceManager.OnRessourcesChangees -= OnRessourcesChangees;
+        GameManager.OnPhaseChanged -= OnPhaseChanged;
+        GameManager.OnWaveChanged -= OnWaveChanged;
+        GameManager.OnPrepTimerUpdated -= OnTimerUpdated;
+        BaseController.OnHPChanged -= OnHPChanged;
+        ResourceManager.OnResourcesChanged -= OnResourcesChanged;
     }
 
     void Update()
     {
-        // Barre de chargement ReadySystem (mise à jour chaque frame)
-        if (readySystem != null)
-        {
-            float prog = readySystem.Progression;
-            if (barreReadyP1 != null) barreReadyP1.fillAmount = prog;
-            if (barreReadyP2 != null) barreReadyP2.fillAmount = prog;
-        }
+        if (readySystem == null) return;
+        float prog = readySystem.Progression;
+        if (p1ReadyBar != null) p1ReadyBar.fillAmount = prog;
+        if (p2ReadyBar != null) p2ReadyBar.fillAmount = prog;
     }
 
-    // ── Callbacks événements ──────────────────────────────────────────────────
-    private void OnPhaseChanged(GameManager.GameState etat)
+    private void OnPhaseChanged(GameManager.GameState state)
     {
-        if (textePhase == null) return;
-        textePhase.text = etat switch
-        {
-            GameManager.GameState.Preparation => "PRÉPARATION",
-            GameManager.GameState.Defense     => "DÉFENSE",
-            _                                 => "TEST"
-        };
-        if (imagePhase == null) return;
-        imagePhase.sprite = etat switch {
-            GameManager.GameState.Preparation => prepSprite,
-            GameManager.GameState.Defense     => defenseSprite,
-            _                                 => prepSprite
-        };
-        if (etat == GameManager.GameState.Preparation) {
-            Debug.Log("Changing to prepSprite: " + (prepSprite != null ? prepSprite.name : "NULL"));
-        }
-        if (etat == GameManager.GameState.Defense) {
-            Debug.Log("Changing to defenseSprite: " + (defenseSprite != null ? defenseSprite.name : "NULL"));
-        }
+        if (phaseText != null)
+            phaseText.text = state switch
+            {
+                GameManager.GameState.Preparation => "PRÉPARATION",
+                GameManager.GameState.Defense => "DÉFENSE",
+                _ => ""
+            };
+
+        if (phaseImage != null)
+            phaseImage.sprite = state switch
+            {
+                GameManager.GameState.Preparation => prepSprite,
+                GameManager.GameState.Defense => defenseSprite,
+                _ => prepSprite
+            };
     }
 
-    private void OnWaveChanged(int vague)
+    private void OnWaveChanged(int wave)
     {
-        if (texteVague != null)
-            texteVague.text = $"Vague {vague}";
+        if (waveText != null)
+            waveText.text = $"Vague {wave}";
     }
 
-    private void OnTimerUpdated(float temps)
+    private void OnTimerUpdated(float time)
     {
-        if (texteTimer == null) return;
-
-        if (temps > 0f)
-            texteTimer.text = $"Prochaine vague dans {Mathf.CeilToInt(temps)}s";
-        else
-            texteTimer.text = "Maintien Tab / B pour lancer";
+        if (timerText == null) return;
+        timerText.text = time > 0f
+            ? $"Prochaine vague dans {Mathf.CeilToInt(time)}s"
+            : "Maintien Tab / B pour lancer";
     }
 
-    private void OnPVChanges(int pvActuels, int pvMax)
+    private void OnHPChanged(int currentHP, int maxHP)
     {
-        // if (sliderBaseHP != null)
-        // {
-        //     sliderBaseHP.maxValue = pvMax;
-        //     sliderBaseHP.value    = pvActuels;
-        // }
-        if (baseHP != null) {
-            baseHP.fillAmount = pvActuels / pvMax;
-        }
+        if (baseHPBar != null)
+            baseHPBar.fillAmount = (float)currentHP / maxHP;
     }
 
-    private void OnRessourcesChangees(int playerIndex, int montant)
+    private void OnResourcesChanged(int playerIndex, int amount)
     {
-        if (playerIndex == 1 && texteRessourcesP1 != null)
-            texteRessourcesP1.text = $"{montant}";
-        else if (playerIndex == 2 && texteRessourcesP2 != null)
-            texteRessourcesP2.text = $"{montant}";
+        if (playerIndex == 1 && p1ResourceText != null)
+            p1ResourceText.text = $"{amount}";
+        else if (playerIndex == 2 && p2ResourceText != null)
+            p2ResourceText.text = $"{amount}";
     }
 }

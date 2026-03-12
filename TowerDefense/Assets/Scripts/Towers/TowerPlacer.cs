@@ -1,65 +1,46 @@
 using UnityEngine;
 
-/// <summary>
-/// Gère le placement de tours 2×2 cellules par un joueur.
-///
-/// - Affiche un curseur coloré sur le bloc 2×2 sous le joueur
-///   (vert = placement valide, rouge = invalide)
-/// - Appuyer sur E / buttonSouth pour poser la tour
-/// - La tour est posée uniquement pendant la phase de préparation
-/// - Le placement est limité à la demi-map du joueur (minX/maxX)
-///   mais le mouvement est libre (géré dans PlayerController)
-///
-/// Attacher ce script sur le GameObject joueur (même que PlayerController).
-/// </summary>
 public class TowerPlacer : MonoBehaviour
 {
-    [Header("Joueur")]
+    [Header("Player")]
     [SerializeField] private int playerIndex = 1;
 
-    [Header("Tour à placer")]
+    [Header("Tower")]
     [SerializeField] private GameObject towerPrefab;
-    [SerializeField] private int        coutTour = 50;
+    [SerializeField] private int towerCost = 50;
 
-    [Header("Limites de placement (demi-map du joueur)")]
+    [Header("Placement Bounds")]
     [SerializeField] private float minX = -20f;
-    [SerializeField] private float maxX =   0f;
+    [SerializeField] private float maxX = 0f;
 
-    // ── Curseur ───────────────────────────────────────────────────────────────
-    private GameObject     _cursor;
+    private GameObject _cursor;
     private SpriteRenderer _cursorRenderer;
 
-    private static readonly Color COULEUR_VALIDE   = new Color(0f, 1f, 0f, 0.45f);
-    private static readonly Color COULEUR_INVALIDE = new Color(1f, 0f, 0f, 0.45f);
+    private static readonly Color COLOR_VALID = new Color(0f, 1f, 0f, 0.45f);
+    private static readonly Color COLOR_INVALID = new Color(1f, 0f, 0f, 0.45f);
 
-    // ── État ──────────────────────────────────────────────────────────────────
-    private Node _noeudAncre;   // coin bas-gauche du bloc 2×2
-    private bool _placementValide;
+    private Node _anchorNode;
+    private bool _placementValid;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     void Start()
     {
-        CreerCurseur();
+        CreateCursor();
     }
 
     void Update()
     {
-        bool enPreparation = GameManager.Instance?.CurrentState == GameManager.GameState.Preparation;
-        _cursor.SetActive(enPreparation);
+        bool inPrep = GameManager.Instance?.CurrentState == GameManager.GameState.Preparation;
+        _cursor.SetActive(inPrep);
 
-        if (!enPreparation) return;
+        if (!inPrep) return;
 
-        MettreAJourCurseur();
+        UpdateCursor();
 
-        if (InputManager.Instance != null &&
-            InputManager.Instance.GetInput(playerIndex).PlaceTowerPressed)
-        {
-            TenterPlacement();
-        }
+        if (InputManager.Instance != null && InputManager.Instance.GetInput(playerIndex).PlaceTowerPressed)
+            TryPlace();
     }
 
-    // ── Curseur ───────────────────────────────────────────────────────────────
-    private void CreerCurseur()
+    private void CreateCursor()
     {
         _cursor = new GameObject($"Cursor_P{playerIndex}");
 
@@ -69,77 +50,70 @@ public class TowerPlacer : MonoBehaviour
         Sprite sprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1);
 
         _cursorRenderer = _cursor.AddComponent<SpriteRenderer>();
-        _cursorRenderer.sprite       = sprite;
+        _cursorRenderer.sprite = sprite;
         _cursorRenderer.sortingOrder = 5;
 
-        // Curseur 2×2 cellules
-        float taille = GridManager.Instance != null ? GridManager.Instance.TailleCellule : 1f;
-        _cursor.transform.localScale = Vector3.one * taille * 2f * 0.95f;
+        float size = GridManager.Instance != null ? GridManager.Instance.CellSize : 1f;
+        _cursor.transform.localScale = Vector3.one * size * 2f * 0.95f;
     }
 
-    private void MettreAJourCurseur()
+    private void UpdateCursor()
     {
         if (GridManager.Instance == null) return;
 
-        _noeudAncre = GridManager.Instance.MondeVersNoeud(transform.position);
-        if (_noeudAncre == null) return;
+        _anchorNode = GridManager.Instance.WorldToNode(transform.position);
+        if (_anchorNode == null) return;
 
-        // Centrer le curseur sur le bloc 2×2 (ancre = coin bas-gauche)
-        float tc = GridManager.Instance.TailleCellule;
-        Vector2 centreBloc = _noeudAncre.worldPosition + new Vector2(tc * 0.5f, tc * 0.5f);
-        _cursor.transform.position = centreBloc;
+        float cs = GridManager.Instance.CellSize;
+        Vector2 blockCenter = _anchorNode.worldPosition + new Vector2(cs * 0.5f, cs * 0.5f);
+        _cursor.transform.position = blockCenter;
 
-        _placementValide = VerifierValidite(_noeudAncre);
-        _cursorRenderer.color = _placementValide ? COULEUR_VALIDE : COULEUR_INVALIDE;
+        _placementValid = IsPlacementValid(_anchorNode);
+        _cursorRenderer.color = _placementValid ? COLOR_VALID : COLOR_INVALID;
     }
 
-    // ── Validation ────────────────────────────────────────────────────────────
-    private bool VerifierValidite(Node ancre)
+    private bool IsPlacementValid(Node anchor)
     {
-        if (ancre == null) return false;
+        if (anchor == null) return false;
 
-        Node[] bloc = ObtenirBlocNodes(ancre);
-        if (bloc == null) return false;
+        Node[] block = GetBlockNodes(anchor);
+        if (block == null) return false;
 
-        foreach (Node n in bloc)
+        foreach (Node n in block)
         {
             if (n == null || !n.walkable) return false;
-            // Restriction de placement à la demi-map du joueur
             if (n.worldPosition.x < minX || n.worldPosition.x > maxX) return false;
         }
 
         if (ResourceManager.Instance != null &&
-            !ResourceManager.Instance.AAssezDeRessources(playerIndex, coutTour)) return false;
+            !ResourceManager.Instance.HasEnoughResources(playerIndex, towerCost)) return false;
 
         return true;
     }
 
-    /// <summary>Retourne les 4 noeuds du bloc 2×2 ancré en bas-gauche, ou null si hors grille.</summary>
-    private Node[] ObtenirBlocNodes(Node ancre)
+    private Node[] GetBlockNodes(Node anchor)
     {
         GridManager gm = GridManager.Instance;
-        Node n00 = gm.ObtenirNoeud(ancre.gridX,     ancre.gridY);
-        Node n10 = gm.ObtenirNoeud(ancre.gridX + 1, ancre.gridY);
-        Node n01 = gm.ObtenirNoeud(ancre.gridX,     ancre.gridY + 1);
-        Node n11 = gm.ObtenirNoeud(ancre.gridX + 1, ancre.gridY + 1);
+        Node n00 = gm.GetNode(anchor.gridX, anchor.gridY);
+        Node n10 = gm.GetNode(anchor.gridX + 1, anchor.gridY);
+        Node n01 = gm.GetNode(anchor.gridX, anchor.gridY + 1);
+        Node n11 = gm.GetNode(anchor.gridX + 1, anchor.gridY + 1);
 
         if (n00 == null || n10 == null || n01 == null || n11 == null) return null;
         return new Node[] { n00, n10, n01, n11 };
     }
 
-    // ── Placement ─────────────────────────────────────────────────────────────
-    private void TenterPlacement()
+    private void TryPlace()
     {
-        if (!_placementValide || _noeudAncre == null || towerPrefab == null) return;
+        if (!_placementValid || _anchorNode == null || towerPrefab == null) return;
 
         if (ResourceManager.Instance != null &&
-            !ResourceManager.Instance.Depenser(playerIndex, coutTour)) return;
+            !ResourceManager.Instance.Spend(playerIndex, towerCost)) return;
 
-        // Placer la tour au centre du bloc 2×2
-        float tc = GridManager.Instance.TailleCellule;
-        Vector2 centreBloc = _noeudAncre.worldPosition + new Vector2(tc * 0.5f, tc * 0.5f);
-        Instantiate(towerPrefab, centreBloc, Quaternion.identity);
+        float cs = GridManager.Instance.CellSize;
+        Vector2 blockCenter = _anchorNode.worldPosition + new Vector2(cs * 0.5f, cs * 0.5f);
+        Instantiate(towerPrefab, blockCenter, Quaternion.identity);
 
-        GridManager.Instance?.MettreAJourGrille();
+        GridManager.Instance?.UpdateGrid();
     }
 }

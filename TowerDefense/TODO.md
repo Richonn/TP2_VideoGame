@@ -60,6 +60,7 @@
 - [x] Feedback visuel au survol d'une case (placement de tour valide/invalide)
 - [x] Affichage de la portée des tours (cercle en pointillés — `TowerRangeDisplay`)
 - [x] Quadrillage de la map (lignes transparentes — `GridOverlay`)
+- [x] Sprites ennemis et tours (assets Tiny Sword)
 
 ### 🌫️ Culling logique (bonus / critère qualité)
 - [ ] Implémenter un **brouillard de guerre**
@@ -126,5 +127,7 @@
 | Multijoueur | Local, deux contrôleurs physiques séparés |
 | Vue | Top-down 2D |
 | Map | Divisée en deux moitiés symétriques — 40×20 unités, cellules 2×2 |
-| Tours | Bloc 2×2 cellules, portée visible (cercle pointillé) |
-| Base | Centrale, partagée entre les deux joueurs |
+| Tours | Bloc 2×2 cellules, portée visible (cercle pointillé), layer Obstacles (détection grille) |
+| Base | Centrale, partagée entre les deux joueurs — layer Default (pas Obstacles, sinon A* bloqué) |
+| Ennemis | Layer Enemies ou Default — PAS Obstacles (évite de bloquer la grille) |
+| Caméras | Culling Mask inclut Obstacles pour rendre les tours |

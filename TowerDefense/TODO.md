@@ -78,10 +78,12 @@
 - [x] **Écran de chargement** (voir Flot d'application)
 
 ### 🌫️ Rendu interactif avancé — Membre 3 `/20`
-- [ ] **Brouillard de guerre** (culling logique)
+- [x] **Brouillard de guerre** (culling logique)
   > Les ennemis sont cachés tant qu'ils sont hors de portée des tours ou des joueurs
   > ⚠️ Doit être basé sur la position des agents, PAS sur la caméra
-- [ ] Le culling logique est présenté visuellement
+  > ✅ `FogOfWarManager.cs` — tuiles sombres par cellule, révélées par joueurs + tours + base
+- [x] Le culling logique est présenté visuellement
+  > ✅ Tuiles animées (fondu alpha progressif), ennemis cachés via SpriteRenderer.enabled
 - [ ] Les éléments importants sont rendus au travers des obstacles (optionnel)
 - [ ] Minimap par rendu de caméra (optionnel, vaut jusqu'à 9 pts)
 

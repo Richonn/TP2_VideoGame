@@ -28,6 +28,8 @@ public class ControlsRebindingUI : MonoBehaviour
 
     private Button _p1KeyboardBtn, _p1GamepadBtn;
     private Button _p2KeyboardBtn, _p2GamepadBtn;
+    private TextMeshProUGUI _p1DeviceLabel, _p2DeviceLabel;
+    private GameObject _p1DevicePicker, _p2DevicePicker;
     private bool _built;
 
     public void SetRebindingContainer(Transform container)
@@ -88,6 +90,8 @@ public class ControlsRebindingUI : MonoBehaviour
         foreach (GameObject go in toDestroy) { go.transform.SetParent(null); Destroy(go); }
         _entries.Clear();
         _p1KeyboardBtn = _p1GamepadBtn = _p2KeyboardBtn = _p2GamepadBtn = null;
+        _p1DeviceLabel = _p2DeviceLabel = null;
+        _p1DevicePicker = _p2DevicePicker = null;
 
         AddSectionTitle("CONTROLLER ASSIGNMENT");
         AddControllerChoiceRow(1);
@@ -176,6 +180,25 @@ public class ControlsRebindingUI : MonoBehaviour
         if (player == 1) { _p1KeyboardBtn = kbBtn; _p1GamepadBtn = gpBtn; }
         else { _p2KeyboardBtn = kbBtn; _p2GamepadBtn = gpBtn; }
 
+        // Device picker: ◀ [Name] ▶
+        GameObject pickerGO = new GameObject($"P{player}_DevicePicker");
+        pickerGO.transform.SetParent(rowGO.transform, false);
+        HorizontalLayoutGroup pickerHLG = pickerGO.AddComponent<HorizontalLayoutGroup>();
+        pickerHLG.spacing = 4;
+        pickerHLG.childForceExpandWidth = false;
+        pickerHLG.childForceExpandHeight = true;
+        LayoutElement pickerLE = pickerGO.AddComponent<LayoutElement>();
+        pickerLE.minWidth = 180;
+        pickerLE.flexibleWidth = 1;
+        pickerLE.preferredHeight = 44;
+
+        Button prevBtn = CreateSmallButton(pickerGO, "<", 30);
+        TextMeshProUGUI deviceLabel = CreateDeviceLabel(pickerGO);
+        Button nextBtn = CreateSmallButton(pickerGO, ">", 30);
+
+        if (player == 1) { _p1DevicePicker = pickerGO; _p1DeviceLabel = deviceLabel; }
+        else             { _p2DevicePicker = pickerGO; _p2DeviceLabel = deviceLabel; }
+
         int p = player;
         kbBtn.onClick.AddListener(() =>
         {
@@ -188,6 +211,47 @@ public class ControlsRebindingUI : MonoBehaviour
             UpdateControllerButtonColors();
         });
 
+        prevBtn.onClick.AddListener(() => CycleGamepad(p, -1));
+        nextBtn.onClick.AddListener(() => CycleGamepad(p, +1));
+
+        UpdateControllerButtonColors();
+    }
+
+    private TextMeshProUGUI CreateDeviceLabel(GameObject parent)
+    {
+        GameObject go = new GameObject("DeviceLabel");
+        go.transform.SetParent(parent.transform, false);
+        go.AddComponent<Image>().color = new Color(0.12f, 0.12f, 0.2f, 1f);
+        go.AddComponent<RectMask2D>();
+        LayoutElement le = go.AddComponent<LayoutElement>();
+        le.minWidth = 120;
+        le.flexibleWidth = 1;
+        le.preferredHeight = 40;
+
+        GameObject textGO = new GameObject("Text");
+        textGO.transform.SetParent(go.transform, false);
+        TextMeshProUGUI tmp = textGO.AddComponent<TextMeshProUGUI>();
+        tmp.fontSize = 13;
+        tmp.color = Color.white;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.overflowMode = TextOverflowModes.Ellipsis;
+        RectTransform rt = textGO.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = new Vector2(4f, 0f);
+        rt.offsetMax = new Vector2(-4f, 0f);
+        return tmp;
+    }
+
+    private void CycleGamepad(int player, int direction)
+    {
+        if (InputManager.Instance == null) return;
+        int count = Gamepad.all.Count;
+        if (count == 0) return;
+        int current = InputManager.Instance.GetGamepadIndex(player);
+        int next = (current + direction + count) % count;
+        InputManager.Instance.SetGamepadIndex(player, next);
         UpdateControllerButtonColors();
     }
 
@@ -211,16 +275,29 @@ public class ControlsRebindingUI : MonoBehaviour
     {
         if (InputManager.Instance == null) return;
 
-        Color active = new Color(0.25f, 0.65f, 0.25f, 1f);
-        Color inactive = new Color(0.2f, 0.38f, 0.65f, 1f);
+        Color active   = new Color(0.25f, 0.65f, 0.25f, 1f);
+        Color inactive = new Color(0.2f,  0.38f, 0.65f, 1f);
 
         bool p1Kb = InputManager.Instance.GetControllerType(1) == InputManager.ControllerType.Keyboard;
-        if (_p1KeyboardBtn != null) _p1KeyboardBtn.GetComponent<Image>().color = p1Kb ? active : inactive;
-        if (_p1GamepadBtn != null) _p1GamepadBtn.GetComponent<Image>().color = p1Kb ? inactive : active;
+        if (_p1KeyboardBtn  != null) _p1KeyboardBtn.GetComponent<Image>().color  = p1Kb ? active : inactive;
+        if (_p1GamepadBtn   != null) _p1GamepadBtn.GetComponent<Image>().color   = p1Kb ? inactive : active;
+        if (_p1DevicePicker != null) _p1DevicePicker.SetActive(!p1Kb);
+        if (_p1DeviceLabel  != null) _p1DeviceLabel.text = GetGamepadName(InputManager.Instance.GetGamepadIndex(1));
 
         bool p2Kb = InputManager.Instance.GetControllerType(2) == InputManager.ControllerType.Keyboard;
-        if (_p2KeyboardBtn != null) _p2KeyboardBtn.GetComponent<Image>().color = p2Kb ? active : inactive;
-        if (_p2GamepadBtn != null) _p2GamepadBtn.GetComponent<Image>().color = p2Kb ? inactive : active;
+        if (_p2KeyboardBtn  != null) _p2KeyboardBtn.GetComponent<Image>().color  = p2Kb ? active : inactive;
+        if (_p2GamepadBtn   != null) _p2GamepadBtn.GetComponent<Image>().color   = p2Kb ? inactive : active;
+        if (_p2DevicePicker != null) _p2DevicePicker.SetActive(!p2Kb);
+        if (_p2DeviceLabel  != null) _p2DeviceLabel.text = GetGamepadName(InputManager.Instance.GetGamepadIndex(2));
+    }
+
+    private static string GetGamepadName(int index)
+    {
+        var gamepads = Gamepad.all;
+        if (gamepads.Count == 0) return "No Gamepad";
+        int clamped = Mathf.Clamp(index, 0, gamepads.Count - 1);
+        string name = gamepads[clamped].displayName;
+        return $"[{clamped}] {name}";
     }
 
     private void AddAdjusterRow(string label, float min, float max, float step, float initialValue, System.Action<float> setter, string format)

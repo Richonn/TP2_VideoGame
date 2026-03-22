@@ -28,6 +28,9 @@ public class InputManager : MonoBehaviour
     private ControllerType _p1Controller = ControllerType.Keyboard;
     private ControllerType _p2Controller = ControllerType.Gamepad;
 
+    private int _p1GamepadIndex = 0;
+    private int _p2GamepadIndex = 1;
+
     public float DeadZone => deadZone;
     public float Sensitivity => sensitivity;
 
@@ -46,6 +49,8 @@ public class InputManager : MonoBehaviour
         sensitivity = PlayerPrefs.GetFloat("Gamepad_Sensitivity", sensitivity);
         _p1Controller = (ControllerType)PlayerPrefs.GetInt("P1_ControllerType", (int)ControllerType.Keyboard);
         _p2Controller = (ControllerType)PlayerPrefs.GetInt("P2_ControllerType", (int)ControllerType.Gamepad);
+        _p1GamepadIndex = PlayerPrefs.GetInt("P1_GamepadIndex", 0);
+        _p2GamepadIndex = PlayerPrefs.GetInt("P2_GamepadIndex", 1);
     }
 
     private void EnsureKeyBindingManager()
@@ -60,8 +65,8 @@ public class InputManager : MonoBehaviour
 
     void Update()
     {
-        _inputData[0] = _playerInputEnabled1 ? ProcessInput(_p1Controller) : new PlayerInputData();
-        _inputData[1] = _playerInputEnabled2 ? ProcessInput(_p2Controller) : new PlayerInputData();
+        _inputData[0] = _playerInputEnabled1 ? ProcessInput(_p1Controller, 0) : new PlayerInputData();
+        _inputData[1] = _playerInputEnabled2 ? ProcessInput(_p2Controller, 1) : new PlayerInputData();
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
@@ -78,9 +83,9 @@ public class InputManager : MonoBehaviour
         }
     }
 
-    private PlayerInputData ProcessInput(ControllerType type)
+    private PlayerInputData ProcessInput(ControllerType type, int playerIndex)
     {
-        return type == ControllerType.Keyboard ? ProcessKeyboardInput() : ProcessGamepadInput();
+        return type == ControllerType.Keyboard ? ProcessKeyboardInput() : ProcessGamepadInput(playerIndex);
     }
 
     private PlayerInputData ProcessKeyboardInput()
@@ -111,9 +116,11 @@ public class InputManager : MonoBehaviour
         };
     }
 
-    private PlayerInputData ProcessGamepadInput()
+    private PlayerInputData ProcessGamepadInput(int playerIndex)
     {
-        Gamepad gamepad = Gamepad.current;
+        var gamepads = Gamepad.all;
+        int storedIdx = playerIndex == 0 ? _p1GamepadIndex : _p2GamepadIndex;
+        Gamepad gamepad = gamepads.Count > storedIdx ? gamepads[storedIdx] : (gamepads.Count > 0 ? gamepads[0] : null);
         if (gamepad == null) return new PlayerInputData();
 
         Vector2 stick = gamepad.leftStick.ReadValue();
@@ -155,6 +162,16 @@ public class InputManager : MonoBehaviour
 
     public ControllerType GetControllerType(int playerIndex) => playerIndex == 1 ? _p1Controller : _p2Controller;
 
+    public int GetGamepadIndex(int playerIndex) => playerIndex == 1 ? _p1GamepadIndex : _p2GamepadIndex;
+
+    public void SetGamepadIndex(int playerIndex, int index)
+    {
+        if (playerIndex == 1) _p1GamepadIndex = index;
+        else _p2GamepadIndex = index;
+        PlayerPrefs.SetInt($"P{playerIndex}_GamepadIndex", index);
+        PlayerPrefs.Save();
+    }
+
     public void SetControllerType(int playerIndex, ControllerType type)
     {
         if (playerIndex == 1) _p1Controller = type;
@@ -183,11 +200,15 @@ public class InputManager : MonoBehaviour
         PlayerPrefs.DeleteKey("Gamepad_Sensitivity");
         PlayerPrefs.DeleteKey("P1_ControllerType");
         PlayerPrefs.DeleteKey("P2_ControllerType");
+        PlayerPrefs.DeleteKey("P1_GamepadIndex");
+        PlayerPrefs.DeleteKey("P2_GamepadIndex");
         PlayerPrefs.Save();
         deadZone = 0.15f;
         sensitivity = 1f;
         _p1Controller = ControllerType.Keyboard;
         _p2Controller = ControllerType.Gamepad;
+        _p1GamepadIndex = 0;
+        _p2GamepadIndex = 1;
     }
 
     public PlayerInputData GetInput(int playerIndex)

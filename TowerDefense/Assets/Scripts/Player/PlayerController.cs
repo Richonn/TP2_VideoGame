@@ -22,11 +22,22 @@ public class PlayerController : MonoBehaviour
     private Tower _nearbyTower;
     private bool _upgradeMenuOpen = false;
 
+    private Vector3 _baseScale;
+
     void Start()
     {
         _rb = GetComponent<Rigidbody2D>();
         _animator = GetComponent<Animator>();
         interactUI?.Init(transform);
+        _baseScale = transform.localScale;
+
+        FootstepEmitter footstep = GetComponent<FootstepEmitter>();
+        if (footstep == null)
+        {
+            footstep = gameObject.AddComponent<FootstepEmitter>();
+            footstep.Type = SFXType.PlayerFootstep;
+            footstep.AutoEmit = true;
+        }
     }
 
     void Update()
@@ -38,6 +49,21 @@ public class PlayerController : MonoBehaviour
         if (_input.PlaceTowerPressed) OnPlaceTower();
         if (_input.InteractPressed) OnInteract();
         HandleTowerInteraction();
+        UpdateAnimation();
+    }
+
+    private void UpdateAnimation()
+    {
+        if (_animator == null) return;
+        float magnitude = _input.MoveDirection.sqrMagnitude;
+        _animator.SetBool("isMoving", magnitude > 0.01f);
+        _animator.SetFloat("speed", Mathf.Sqrt(magnitude));
+
+        if (Mathf.Abs(_input.MoveDirection.x) > 0.05f)
+        {
+            float sign = Mathf.Sign(_input.MoveDirection.x);
+            transform.localScale = new Vector3(_baseScale.x * sign, _baseScale.y, _baseScale.z);
+        }
     }
 
     void FixedUpdate()
@@ -116,11 +142,12 @@ public class PlayerController : MonoBehaviour
 
     private void OnPlaceTower()
     {
-        Debug.Log($"[Player {playerNumber}] Place tower at {transform.position}");
+        _animator?.SetTrigger("place");
     }
 
     private void OnInteract()
     {
-        Debug.Log($"[Player {playerNumber}] Interact");
+        _animator?.SetTrigger("interact");
+        AudioManager.Instance?.PlaySFX(SFXType.UIClick);
     }
 }

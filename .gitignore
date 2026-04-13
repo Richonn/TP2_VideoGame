@@ -30,3 +30,6 @@ Thumbs.db
 
 # Crashlytics
 crashlytics-build.properties
+
+*.blob
+*.meta

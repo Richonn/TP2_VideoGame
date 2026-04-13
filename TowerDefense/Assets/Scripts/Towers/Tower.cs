@@ -19,6 +19,12 @@ public class Tower : MonoBehaviour
     [SerializeField] private LayerMask enemyLayer;
 
     private float _timer;
+    private Animator _animator;
+
+    void Awake()
+    {
+        _animator = GetComponentInChildren<Animator>();
+    }
 
     void Update()
     {
@@ -46,8 +52,10 @@ public class Tower : MonoBehaviour
         range += rangeUpgradeAmount;
         damage += damageUpgradeAmount;
 
-        // Refresh the range display
         GetComponent<TowerRangeDisplay>()?.RefreshDisplay();
+
+        AudioManager.Instance?.PlaySFX(SFXType.TowerUpgrade, transform.position);
+        VFXManager.Instance?.Play(VFXType.TowerUpgrade, transform.position);
 
         return true;
     }
@@ -70,7 +78,15 @@ public class Tower : MonoBehaviour
             }
         }
 
-        target?.TakeDamage(damage);
+        if (target == null) return;
+
+        _animator?.SetTrigger("fire");
+        AudioManager.Instance?.PlaySFX(SFXType.TowerShoot, transform.position);
+        VFXManager.Instance?.Play(VFXType.TowerMuzzle, transform.position);
+
+        target.TakeDamage(damage);
+        AudioManager.Instance?.PlaySFX(SFXType.TowerImpact, target.transform.position);
+        VFXManager.Instance?.Play(VFXType.TowerImpact, target.transform.position);
     }
 
     void OnDrawGizmosSelected()

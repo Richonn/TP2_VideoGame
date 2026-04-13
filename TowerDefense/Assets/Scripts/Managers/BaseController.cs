@@ -21,6 +21,10 @@ public class BaseController : MonoBehaviour
         CurrentHP = Mathf.Max(0, CurrentHP - damage);
         OnHPChanged?.Invoke(CurrentHP, maxHP);
 
+        AudioManager.Instance?.PlaySFX(SFXType.BaseHit, transform.position);
+        VFXManager.Instance?.Play(VFXType.BaseHit, transform.position);
+        CameraShake.Instance?.Shake(0.12f, 0.18f);
+
         if (CurrentHP <= 0)
             GameManager.Instance?.TriggerGameOver(false);
     }

@@ -33,6 +33,8 @@ public class PauseMenuController : MonoBehaviour
         Time.timeScale = 0f;
         ShowMainPanel();
         pauseMenuCanvas.enabled = true;
+        AnimatePanelIn(_mainPanel);
+        AudioManager.Instance?.PlaySFX(SFXType.UIOpen);
         InputManager.Instance?.SetPlayerInputEnabled(1, false);
         InputManager.Instance?.SetPlayerInputEnabled(2, false);
     }
@@ -43,8 +45,16 @@ public class PauseMenuController : MonoBehaviour
         _isPaused = false;
         Time.timeScale = 1f;
         pauseMenuCanvas.enabled = false;
+        AudioManager.Instance?.PlaySFX(SFXType.UIBack);
         InputManager.Instance?.SetPlayerInputEnabled(1, true);
         InputManager.Instance?.SetPlayerInputEnabled(2, true);
+    }
+
+    private void AnimatePanelIn(GameObject panel)
+    {
+        if (panel == null) return;
+        panel.transform.localScale = Vector3.one * 0.7f;
+        UITween.ScaleTo(panel.transform, Vector3.one, 0.35f, Easing.Ease.EaseOutBack);
     }
 
     private void ShowMainPanel()
@@ -57,6 +67,7 @@ public class PauseMenuController : MonoBehaviour
     {
         _mainPanel?.SetActive(false);
         _controlsPanel?.SetActive(true);
+        AnimatePanelIn(_controlsPanel);
         if (_controlsPanel != null)
         {
             ControlsRebindingUI rebindUI = _controlsPanel.GetComponentInChildren<ControlsRebindingUI>();
@@ -276,6 +287,7 @@ public class PauseMenuController : MonoBehaviour
         cb.pressedColor = new Color(0.12f, 0.28f, 0.5f, 1f);
         btn.colors = cb;
         btn.onClick.AddListener(callback);
+        go.AddComponent<UIButtonFeedback>();
 
         LayoutElement le = go.AddComponent<LayoutElement>();
         le.preferredHeight = 58;
@@ -291,6 +303,7 @@ public class PauseMenuController : MonoBehaviour
         go.AddComponent<Image>().color = color;
         Button btn = go.AddComponent<Button>();
         btn.onClick.AddListener(callback);
+        go.AddComponent<UIButtonFeedback>();
 
         LayoutElement le = go.AddComponent<LayoutElement>();
         le.preferredWidth = width;

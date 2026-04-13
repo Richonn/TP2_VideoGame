@@ -5,28 +5,53 @@ using TMPro;
 public class MainMenuController : MonoBehaviour
 {
     private GameObject _difficultyPanel;
+    private CanvasGroup _difficultyGroup;
+    private Transform _difficultyInnerPanel;
 
     void Start()
     {
         BuildDifficultyPanel();
+        AudioManager.Instance?.PlayMusic(MusicTrack.Menu, 1.5f);
     }
 
     public void OnPlayPressed()
     {
-        _difficultyPanel?.SetActive(true);
+        AudioManager.Instance?.PlaySFX(SFXType.UIClick);
+        if (_difficultyPanel == null) return;
+        _difficultyPanel.SetActive(true);
+        if (_difficultyGroup != null)
+        {
+            _difficultyGroup.alpha = 0f;
+            UITween.FadeTo(_difficultyGroup, 1f, 0.3f);
+        }
+        if (_difficultyInnerPanel != null)
+        {
+            _difficultyInnerPanel.localScale = Vector3.one * 0.6f;
+            UITween.ScaleTo(_difficultyInnerPanel, Vector3.one, 0.45f, Easing.Ease.EaseOutBack);
+        }
     }
 
     public void OnQuitPressed()
     {
+        AudioManager.Instance?.PlaySFX(SFXType.UIBack);
         Application.Quit();
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #endif
     }
 
+    private void HideDifficulty()
+    {
+        if (_difficultyPanel == null) return;
+        if (_difficultyGroup != null)
+            UITween.FadeTo(_difficultyGroup, 0f, 0.2f);
+        _difficultyPanel.SetActive(false);
+    }
+
     private void SelectDifficulty(GameManager.DifficultyLevel difficulty)
     {
-        _difficultyPanel?.SetActive(false);
+        AudioManager.Instance?.PlaySFX(SFXType.UIClick);
+        HideDifficulty();
         if (GameManager.Instance == null)
         {
             Debug.LogError("[MainMenu] GameManager not found!");
@@ -42,6 +67,7 @@ public class MainMenuController : MonoBehaviour
 
         _difficultyPanel = new GameObject("DifficultyPanel");
         _difficultyPanel.transform.SetParent(canvas.transform, false);
+        _difficultyGroup = _difficultyPanel.AddComponent<CanvasGroup>();
 
         Image overlay = _difficultyPanel.AddComponent<Image>();
         overlay.color = new Color(0f, 0f, 0f, 0.85f);
@@ -52,6 +78,7 @@ public class MainMenuController : MonoBehaviour
         overlayRT.offsetMax = Vector2.zero;
 
         GameObject panel = new GameObject("Panel");
+        _difficultyInnerPanel = panel.transform;
         panel.transform.SetParent(_difficultyPanel.transform, false);
         panel.AddComponent<Image>().color = new Color(0.12f, 0.12f, 0.18f, 1f);
         RectTransform panelRT = panel.GetComponent<RectTransform>();
@@ -86,7 +113,7 @@ public class MainMenuController : MonoBehaviour
         CreateButton(panel, "Hard", new Color(0.65f, 0.15f, 0.15f, 1f),
             () => SelectDifficulty(GameManager.DifficultyLevel.Hard));
         CreateButton(panel, "Back", new Color(0.3f, 0.3f, 0.3f, 1f),
-            () => _difficultyPanel.SetActive(false));
+            () => { AudioManager.Instance?.PlaySFX(SFXType.UIBack); HideDifficulty(); });
 
         _difficultyPanel.SetActive(false);
     }
@@ -102,6 +129,9 @@ public class MainMenuController : MonoBehaviour
         cb.pressedColor = color * 0.8f;
         btn.colors = cb;
         btn.onClick.AddListener(callback);
+
+        UIButtonFeedback fb = go.AddComponent<UIButtonFeedback>();
+        fb.Init();
 
         LayoutElement le = go.AddComponent<LayoutElement>();
         le.preferredHeight = 55;

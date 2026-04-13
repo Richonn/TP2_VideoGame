@@ -32,12 +32,25 @@ public class EnemyAI : MonoBehaviour
     private Transform _baseTarget;
     private EnemyState _state = EnemyState.WAITING;
     private Animator _animator;
+    private HitFlash _hitFlash;
+    private bool _dying;
 
     public int WaypointIndex => _waypointIndex;
 
     void Awake()
     {
         _animator = GetComponent<Animator>();
+        _hitFlash = GetComponent<HitFlash>();
+        if (_hitFlash == null) _hitFlash = gameObject.AddComponent<HitFlash>();
+
+        FootstepEmitter footstep = GetComponent<FootstepEmitter>();
+        if (footstep == null)
+        {
+            footstep = gameObject.AddComponent<FootstepEmitter>();
+            footstep.Type = SFXType.EnemyFootstep;
+            footstep.AutoEmit = true;
+        }
+
         ConfigureByType();
         ApplyDifficultyModifiers();
         _currentHP = maxHP;
@@ -62,6 +75,7 @@ public class EnemyAI : MonoBehaviour
 
     void Update()
     {
+        if (_dying) return;
         if (state == EnemyState.ARRIVED)
         {
             _attackTimer -= Time.deltaTime;
@@ -187,21 +201,32 @@ public class EnemyAI : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
+        if (_dying) return;
+
         _currentHP -= damage;
+        _hitFlash?.Flash();
+        AudioManager.Instance?.PlaySFX(SFXType.EnemyHit, transform.position);
+        VFXManager.Instance?.Play(VFXType.EnemyHit, transform.position);
+
         if (_currentHP <= 0)
             Die();
     }
 
     private void Die()
     {
+        _dying = true;
+        state = EnemyState.DEAD;
+
         if (ResourceManager.Instance != null)
         {
-            state = EnemyState.DEAD;
             ResourceManager.Instance.Add(1, _goldReward);
             ResourceManager.Instance.Add(2, _goldReward);
         }
 
+        AudioManager.Instance?.PlaySFX(SFXType.EnemyDeath, transform.position);
+        VFXManager.Instance?.Play(VFXType.EnemyDeath, transform.position);
+
         OnEnemyDied?.Invoke();
-        Destroy(gameObject);
+        Destroy(gameObject, 0.1f);
     }
 }

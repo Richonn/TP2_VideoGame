@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
@@ -23,10 +24,32 @@ public class GameOverController : MonoBehaviour
 
         if (wavesText != null)
             wavesText.text = $"Waves survived: {waves}";
+
+        AudioManager.Instance?.PlayMusic(victory ? MusicTrack.Victory : MusicTrack.Defeat, 0.6f);
+        StartCoroutine(CascadeIn());
+    }
+
+    private IEnumerator CascadeIn()
+    {
+        Transform[] targets = { titleText?.transform, subtitleText?.transform, wavesText?.transform };
+        foreach (Transform t in targets)
+        {
+            if (t == null) continue;
+            t.localScale = Vector3.zero;
+        }
+        yield return null;
+
+        for (int i = 0; i < targets.Length; i++)
+        {
+            if (targets[i] == null) continue;
+            UITween.ScaleTo(targets[i], Vector3.one, 0.45f, Easing.Ease.EaseOutBack);
+            yield return new WaitForSecondsRealtime(0.15f);
+        }
     }
 
     public void OnReplayPressed()
     {
+        AudioManager.Instance?.PlaySFX(SFXType.UIClick);
         if (GameManager.Instance != null)
             GameManager.Instance.StartGame();
         else
@@ -35,6 +58,7 @@ public class GameOverController : MonoBehaviour
 
     public void OnMenuPressed()
     {
+        AudioManager.Instance?.PlaySFX(SFXType.UIBack);
         if (GameManager.Instance != null)
             GameManager.Instance.ReturnToMenu();
         else

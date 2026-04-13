@@ -98,19 +98,34 @@ public class TowerInteractUI : MonoBehaviour
 
     public void ShowPrompt(Tower tower)
     {
+        bool wasActive = promptObject != null && promptObject.activeSelf;
         _currentTower = tower;
-        promptObject.SetActive(true);
-        menuPanel.SetActive(false);
+        if (promptObject != null)
+        {
+            promptObject.SetActive(true);
+            if (!wasActive)
+            {
+                promptObject.transform.localScale = Vector3.zero;
+                UITween.ScaleTo(promptObject.transform, Vector3.one, 0.25f, Easing.Ease.EaseOutBack);
+            }
+        }
+        if (menuPanel != null) menuPanel.SetActive(false);
     }
 
     public void OpenMenu(Tower tower)
     {
         _currentTower = tower;
-        promptObject.SetActive(false);
-        menuPanel.SetActive(true);
+        if (promptObject != null) promptObject.SetActive(false);
+        if (menuPanel != null)
+        {
+            menuPanel.SetActive(true);
+            menuPanel.transform.localScale = Vector3.one * 0.7f;
+            UITween.ScaleTo(menuPanel.transform, Vector3.one, 0.3f, Easing.Ease.EaseOutBack);
+        }
         _selectedIndex = 0;
         UpdateButtonVisuals();
         RefreshText();
+        AudioManager.Instance?.PlaySFX(SFXType.UIOpen);
     }
 
     public void HideAll()

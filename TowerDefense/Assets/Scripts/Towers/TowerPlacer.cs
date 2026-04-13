@@ -115,5 +115,8 @@ public class TowerPlacer : MonoBehaviour
         Instantiate(towerPrefab, blockCenter, Quaternion.identity);
 
         GridManager.Instance?.UpdateGrid();
+
+        AudioManager.Instance?.PlaySFX(SFXType.TowerPlace, blockCenter);
+        VFXManager.Instance?.Play(VFXType.TowerPlace, blockCenter);
     }
 }

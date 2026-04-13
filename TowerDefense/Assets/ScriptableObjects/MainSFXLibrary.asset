@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 085a56dde918f416b9d64e24b6dc6ded, type: 3}
+  m_Name: MainSFXLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::SFXLibrary
+  entries:
+  - type: 0
+    variants:
+    - {fileID: 8300000, guid: 7cb8aff9edc204fc6a6242fdbcf92739, type: 3}
+    - {fileID: 8300000, guid: b650403b0cb3d4af0a2f7c29ab715410, type: 3}
+    - {fileID: 8300000, guid: bba3347fc1b73427897deacc945d5397, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08
+  - type: 1
+    variants:
+    - {fileID: 8300000, guid: d76dd4e67a12b4a87bde47729be9e175, type: 3}
+    - {fileID: 8300000, guid: 019b007abbde742e4ab8a4a6eb5fc907, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08
+  - type: 2
+    variants:
+    - {fileID: 8300000, guid: 85c89621c48be4170b0dbf5b67f96c39, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08
+  - type: 3
+    variants:
+    - {fileID: 8300000, guid: 4794ec020a8804bea99b48f11490edee, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08
+  - type: 4
+    variants:
+    - {fileID: 8300000, guid: 4327218c2376349eab7f7e39f191054c, type: 3}
+    - {fileID: 8300000, guid: cf307bc9dbc45488991412ffa1d10784, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08
+  - type: 5
+    variants:
+    - {fileID: 8300000, guid: a33ee8dd9bbbc4d528d7ff70e3eb7a8c, type: 3}
+    - {fileID: 8300000, guid: 044558d84f2944493a17cc1aef32be3c, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08
+  - type: 6
+    variants:
+    - {fileID: 8300000, guid: 202528d7ab4324f62bee2d5db4d7c757, type: 3}
+    - {fileID: 8300000, guid: 6d739af25d94f4a859218621d644f675, type: 3}
+    - {fileID: 8300000, guid: a8fdb46e2cd124bd0a36482ad866bb39, type: 3}
+    - {fileID: 8300000, guid: 22385dd872c4a470289cbd8bc656cc91, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08
+  - type: 8
+    variants:
+    - {fileID: 8300000, guid: 5c51ec1030a2d4bd8b1e4530512698c7, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08
+  - type: 9
+    variants:
+    - {fileID: 8300000, guid: b12080efabfbb4c1eb2aea7023658b15, type: 3}
+    - {fileID: 8300000, guid: 7bc3cec70077e4a5e949de0464873463, type: 3}
+    - {fileID: 8300000, guid: 28d03f980115c43629981a6614f3bd20, type: 3}
+    - {fileID: 8300000, guid: 0aa3757bf05fd48c9a60bc9d8b325319, type: 3}
+    volume: 0.8
+    pitchJitter: 0.08

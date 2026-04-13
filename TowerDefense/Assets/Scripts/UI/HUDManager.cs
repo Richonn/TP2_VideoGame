@@ -24,6 +24,12 @@ public class HUDManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private ReadySystem readySystem;
 
+    private int _p1Last, _p2Last;
+    private RectTransform _phaseTextRT;
+    private Vector2 _phaseTextBasePos;
+    private static readonly Color HP_FULL = new Color(0.35f, 0.85f, 0.35f, 1f);
+    private static readonly Color HP_LOW  = new Color(0.9f, 0.25f, 0.25f, 1f);
+
     void OnEnable()
     {
         GameManager.OnPhaseChanged += OnPhaseChanged;
@@ -34,15 +40,23 @@ public class HUDManager : MonoBehaviour
 
     void Start()
     {
+        if (phaseText != null)
+        {
+            _phaseTextRT = phaseText.rectTransform;
+            _phaseTextBasePos = _phaseTextRT.anchoredPosition;
+        }
+
         if (ResourceManager.Instance != null)
         {
-            OnResourcesChanged(1, ResourceManager.Instance.GetResources(1));
-            OnResourcesChanged(2, ResourceManager.Instance.GetResources(2));
+            _p1Last = ResourceManager.Instance.GetResources(1);
+            _p2Last = ResourceManager.Instance.GetResources(2);
+            if (p1ResourceText != null) p1ResourceText.text = _p1Last.ToString();
+            if (p2ResourceText != null) p2ResourceText.text = _p2Last.ToString();
         }
 
         BaseController base_ = FindFirstObjectByType<BaseController>();
-        if (base_ != null)
-            OnHPChanged(base_.CurrentHP, base_.MaxHP);
+        if (base_ != null && baseHPBar != null)
+            baseHPBar.fillAmount = (float)base_.CurrentHP / base_.MaxHP;
     }
 
     void OnDisable()
@@ -64,6 +78,7 @@ public class HUDManager : MonoBehaviour
     private void OnPhaseChanged(GameManager.GameState state)
     {
         if (phaseText != null)
+        {
             phaseText.text = state switch
             {
                 GameManager.GameState.Preparation => "PREPARE THE BASE",
@@ -71,13 +86,24 @@ public class HUDManager : MonoBehaviour
                 _ => ""
             };
 
+            if (_phaseTextRT != null)
+            {
+                _phaseTextRT.anchoredPosition = _phaseTextBasePos + new Vector2(0f, 80f);
+                UITween.MoveTo(_phaseTextRT, _phaseTextBasePos, 0.5f, Easing.Ease.EaseOutBack);
+                UITween.Punch(phaseText.transform, 0.22f, 0.35f);
+            }
+        }
+
         if (phaseImage != null)
+        {
             phaseImage.sprite = state switch
             {
                 GameManager.GameState.Preparation => prepSprite,
                 GameManager.GameState.Defense => defenseSprite,
                 _ => prepSprite
             };
+            UITween.Punch(phaseImage.transform, 0.2f, 0.3f);
+        }
 
         if (helpText != null)
             helpText.text = state switch
@@ -91,20 +117,35 @@ public class HUDManager : MonoBehaviour
     private void OnWaveChanged(int wave)
     {
         if (waveText != null)
+        {
             waveText.text = $"Vague {wave}";
+            UITween.Punch(waveText.transform, 0.25f, 0.4f);
+        }
+        AudioManager.Instance?.PlaySFX(SFXType.UIWaveStart);
     }
 
     private void OnHPChanged(int currentHP, int maxHP)
     {
-        if (baseHPBar != null)
-            baseHPBar.fillAmount = (float)currentHP / maxHP;
+        if (baseHPBar == null) return;
+        float target = (float)currentHP / maxHP;
+        UITween.FillTo(baseHPBar, target, 0.35f, Easing.Ease.EaseOutCubic);
+        UITween.ColorTo(baseHPBar, Color.Lerp(HP_LOW, HP_FULL, target), 0.35f);
+        UITween.Punch(baseHPBar.transform, 0.15f, 0.22f);
     }
 
     private void OnResourcesChanged(int playerIndex, int amount)
     {
         if (playerIndex == 1 && p1ResourceText != null)
-            p1ResourceText.text = $"{amount}";
+        {
+            UITween.CountTo(p1ResourceText, _p1Last, amount, 0.4f);
+            _p1Last = amount;
+            UITween.Punch(p1ResourceText.transform, 0.18f, 0.25f);
+        }
         else if (playerIndex == 2 && p2ResourceText != null)
-            p2ResourceText.text = $"{amount}";
+        {
+            UITween.CountTo(p2ResourceText, _p2Last, amount, 0.4f);
+            _p2Last = amount;
+            UITween.Punch(p2ResourceText.transform, 0.18f, 0.25f);
+        }
     }
 }

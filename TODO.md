@@ -32,7 +32,7 @@ Suivi des travaux TP2 (rendu) et TP3 (rétroaction audiovisuelle, deadline **30 
 
 ### Pilier 1 — Animation des agents /15
 
-- [x] Branchement de l'`Animator` du Player (`PlayerController`) — `isMoving`, `speed`, triggers `place`/`interact`, flip horizontal selon direction
+- [ ] Branchement de l'`Animator` du Player (`PlayerController`) — `isMoving`, `speed`, triggers `place`/`interact`, flip horizontal selon direction
 - [x] `EnemyAI` — flash rouge sur dégâts (`HitFlash`), états `HURT`/`DYING` via `_dying` gate
 - [x] Auto-add `FootstepEmitter` sur Player et ennemis (mode auto basé sur le mouvement, pas besoin d'AnimationEvent)
 - [~] `Tower.cs` câble `_animator?.SetTrigger("fire")` dans `ShootAtEnemy` — **inerte tant qu'il n'y a pas de `Tower.controller` avec ce paramètre**

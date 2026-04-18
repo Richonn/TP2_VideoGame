@@ -129,8 +129,7 @@ public class HUDManager : MonoBehaviour
         if (baseHPBar == null) return;
         float target = (float)currentHP / maxHP;
         UITween.FillTo(baseHPBar, target, 0.35f, Easing.Ease.EaseOutCubic);
-        UITween.ColorTo(baseHPBar, Color.Lerp(HP_LOW, HP_FULL, target), 0.35f);
-        UITween.Punch(baseHPBar.transform, 0.15f, 0.22f);
+        UITween.Punch(baseHPBar.transform, 0.01f, 0.22f);
     }
 
     private void OnResourcesChanged(int playerIndex, int amount)

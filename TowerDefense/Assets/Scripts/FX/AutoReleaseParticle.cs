@@ -7,6 +7,7 @@ public class AutoReleaseParticle : MonoBehaviour
     private VFXManager _manager;
     private VFXType _type;
     private ParticleSystem _ps;
+    private Animator _animator;
     private float _timer;
     private bool _armed;
 
@@ -15,6 +16,8 @@ public class AutoReleaseParticle : MonoBehaviour
         _manager = manager;
         _type = type;
         _ps = GetComponent<ParticleSystem>();
+        _animator = GetComponent<Animator>();
+        
         if (_ps != null)
         {
             ParticleSystem.MainModule main = _ps.main;
@@ -38,6 +41,8 @@ public class AutoReleaseParticle : MonoBehaviour
         bool done;
         if (_ps != null)
             done = !_ps.IsAlive(true);
+        else if (_animator != null)
+            done = _timer >= fallbackDuration;  // Fallback for animators
         else
             done = _timer >= fallbackDuration;
 

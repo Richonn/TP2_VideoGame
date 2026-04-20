@@ -87,8 +87,17 @@ public class VFXManager : MonoBehaviour
         if (auto == null) auto = instance.AddComponent<AutoReleaseParticle>();
         auto.Init(this, type);
 
+        // Play ParticleSystem if available
         ParticleSystem ps = instance.GetComponent<ParticleSystem>();
         if (ps != null) ps.Play(true);
+
+        // Reset and play Animator if available (for sprite-based animations)
+        Animator animator = instance.GetComponent<Animator>();
+        if (animator != null)
+        {
+            animator.Rebind();
+            animator.SetTrigger("Play");
+        }
     }
 
     public void Release(VFXType type, GameObject instance)

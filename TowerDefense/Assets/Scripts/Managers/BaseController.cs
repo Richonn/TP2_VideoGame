@@ -25,8 +25,6 @@ public class BaseController : MonoBehaviour
         OnHPChanged?.Invoke(CurrentHP, maxHP);
 
         AudioManager.Instance?.PlaySFX(SFXType.BaseHit, transform.position);
-        VFXManager.Instance?.Play(VFXType.BaseHit, transform.position);
-        CameraShake.Instance?.Shake(0.12f, 0.18f);
 
         if (CurrentHP <= maxHP / 2 && !halfHPReached)
         {

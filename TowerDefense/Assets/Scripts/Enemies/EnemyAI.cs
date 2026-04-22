@@ -225,7 +225,6 @@ public class EnemyAI : MonoBehaviour
         }
 
         AudioManager.Instance?.PlaySFX(SFXType.EnemyDeath, transform.position);
-        VFXManager.Instance?.Play(VFXType.EnemyDeath, transform.position);
 
         OnEnemyDied?.Invoke();
         Destroy(gameObject, 0.1f);

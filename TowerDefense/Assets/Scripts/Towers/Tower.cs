@@ -13,6 +13,7 @@ public class Tower : MonoBehaviour
     [SerializeField] private int rangeUpgradeCost = 100;
     [SerializeField] private float rangeUpgradeAmount = 0.5f;
     [SerializeField] private int damageUpgradeAmount = 1;
+    [SerializeField] private ParticleSystem upgradeParticles;
 
 
     [Header("Targeting")]
@@ -55,7 +56,7 @@ public class Tower : MonoBehaviour
         GetComponent<TowerRangeDisplay>()?.RefreshDisplay();
 
         AudioManager.Instance?.PlaySFX(SFXType.TowerUpgrade, transform.position);
-        VFXManager.Instance?.Play(VFXType.TowerUpgrade, transform.position);
+        upgradeParticles.Play();
 
         return true;
     }
@@ -82,17 +83,9 @@ public class Tower : MonoBehaviour
 
         _animator?.SetTrigger("fire");
         AudioManager.Instance?.PlaySFX(SFXType.TowerShoot, transform.position);
-        VFXManager.Instance?.Play(VFXType.TowerMuzzle, transform.position);
 
         Vector3 enemyPos = target.transform.position;
         target.TakeDamage(damage);
-
-        GameObject proj = VFXManager.Instance?.LaunchProjectile(transform.position, enemyPos);
-        if (proj == null)
-        {
-            AudioManager.Instance?.PlaySFX(SFXType.TowerImpact, enemyPos);
-            VFXManager.Instance?.Play(VFXType.TowerImpact, enemyPos);
-        }
     }
 
     void OnDrawGizmosSelected()

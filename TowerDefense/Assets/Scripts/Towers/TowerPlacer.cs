@@ -117,6 +117,5 @@ public class TowerPlacer : MonoBehaviour
         GridManager.Instance?.UpdateGrid();
 
         AudioManager.Instance?.PlaySFX(SFXType.TowerPlace, blockCenter);
-        VFXManager.Instance?.Play(VFXType.TowerPlace, blockCenter);
     }
 }

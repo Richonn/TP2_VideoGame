@@ -3,7 +3,6 @@ using UnityEngine;
 public class Projectile : MonoBehaviour
 {
     [SerializeField] private float speed = 14f;
-    [SerializeField] private VFXType impactVFX = VFXType.TowerImpact;
     [SerializeField] private SFXType impactSFX = SFXType.TowerImpact;
 
     private Vector3 _start;
@@ -56,8 +55,6 @@ public class Projectile : MonoBehaviour
     private void OnArrive()
     {
         _active = false;
-        VFXManager.Instance?.Play(impactVFX, _end);
         AudioManager.Instance?.PlaySFX(impactSFX, _end);
-        VFXManager.Instance?.ReleaseProjectile(gameObject);
     }
 }

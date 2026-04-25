@@ -33,7 +33,7 @@ public class EnemyAI : MonoBehaviour
     private EnemyState _state = EnemyState.WAITING;
     private Animator _animator;
     private HitFlash _hitFlash;
-    private bool _dying;
+    private Vector3 _baseScale;
 
     public int WaypointIndex => _waypointIndex;
 
@@ -54,6 +54,7 @@ public class EnemyAI : MonoBehaviour
         ConfigureByType();
         ApplyDifficultyModifiers();
         _currentHP = maxHP;
+        _baseScale = transform.localScale;
     }
 
     void Start()
@@ -75,7 +76,7 @@ public class EnemyAI : MonoBehaviour
 
     void Update()
     {
-        if (_dying) return;
+        if (state == EnemyState.DEAD) return;
         if (state == EnemyState.ARRIVED)
         {
             _attackTimer -= Time.deltaTime;
@@ -139,13 +140,13 @@ public class EnemyAI : MonoBehaviour
 
     private void UpdateAnimator()
     {
-        int stateAnim = _state switch // idle = 0, run = 1, attack = 2
+        int stateAnim = _state switch // idle = 0, run = 1, attack = 2, dead = 3
         {
             EnemyState.WAITING  => 0,
             EnemyState.MOVING   => 1,
             EnemyState.ARRIVED  => 2,
             EnemyState.BLOCKED  => 0,
-            EnemyState.DEAD     => 0,
+            EnemyState.DEAD     => 3,
             _                   => 0
         };
 
@@ -183,6 +184,7 @@ public class EnemyAI : MonoBehaviour
         state = EnemyState.MOVING;
         Vector2 destination = _path[_waypointIndex];
         transform.position = Vector2.MoveTowards(transform.position, destination, speed * Time.deltaTime);
+        UpdateAnimation();
 
         if (Vector2.Distance(transform.position, destination) < waypointTolerance)
             _waypointIndex++;
@@ -201,12 +203,10 @@ public class EnemyAI : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        if (_dying) return;
+        if (state == EnemyState.DEAD) return;
 
         _currentHP -= damage;
         _hitFlash?.Flash();
-        AudioManager.Instance?.PlaySFX(SFXType.EnemyHit, transform.position);
-        VFXManager.Instance?.Play(VFXType.EnemyHit, transform.position);
 
         if (_currentHP <= 0)
             Die();
@@ -214,7 +214,6 @@ public class EnemyAI : MonoBehaviour
 
     private void Die()
     {
-        _dying = true;
         state = EnemyState.DEAD;
 
         if (ResourceManager.Instance != null)
@@ -224,9 +223,22 @@ public class EnemyAI : MonoBehaviour
         }
 
         AudioManager.Instance?.PlaySFX(SFXType.EnemyDeath, transform.position);
-        VFXManager.Instance?.Play(VFXType.EnemyDeath, transform.position);
 
         OnEnemyDied?.Invoke();
         Destroy(gameObject, 0.1f);
+    }
+
+    private void UpdateAnimation()
+    {
+        if (_animator == null || _path == null || _waypointIndex >= _path.Count) return;
+        
+        Vector2 direction = (_path[_waypointIndex] - (Vector2)transform.position).normalized;
+        
+        // Flip sprite based on movement direction
+        if (Mathf.Abs(direction.x) > 0.05f)
+        {
+            float sign = Mathf.Sign(direction.x);
+            transform.localScale = new Vector3(_baseScale.x * sign, _baseScale.y, _baseScale.z);
+        }
     }
 }

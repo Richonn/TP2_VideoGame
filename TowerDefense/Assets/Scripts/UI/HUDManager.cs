@@ -7,10 +7,12 @@ public class HUDManager : MonoBehaviour
     [Header("Player 1 HUD")]
     [SerializeField] private TMP_Text p1ResourceText;
     [SerializeField] private Image p1ReadyBar;
+    [SerializeField] private Image p1AvatarIcon;
 
     [Header("Player 2 HUD")]
     [SerializeField] private TMP_Text p2ResourceText;
     [SerializeField] private Image p2ReadyBar;
+    [SerializeField] private Image p2AvatarIcon;
 
     [Header("Shared HUD")]
     [SerializeField] private TMP_Text waveText;
@@ -57,6 +59,16 @@ public class HUDManager : MonoBehaviour
         BaseController base_ = FindFirstObjectByType<BaseController>();
         if (base_ != null && baseHPBar != null)
             baseHPBar.fillAmount = (float)base_.CurrentHP / base_.MaxHP;
+        if (AvatarSessionManager.Instance != null)
+        {
+            for (int p = 1; p <= 2; p++)
+            {
+                Sprite icon = AvatarSessionManager.Instance.GetAvatarIcon(
+                    AvatarSessionManager.Instance.GetPlayerAvatar(p));
+                if (icon != null)
+                    UpdatePlayerAvatarIcon(p, icon);
+            }
+        }
     }
 
     void OnDisable()
@@ -145,6 +157,20 @@ public class HUDManager : MonoBehaviour
             UITween.CountTo(p2ResourceText, _p2Last, amount, 0.4f);
             _p2Last = amount;
             UITween.Punch(p2ResourceText.transform, 0.18f, 0.25f);
+        }
+    }
+
+    public void UpdatePlayerAvatarIcon(int playerNumber, Sprite avatarIcon)
+    {
+        if (playerNumber == 1 && p1AvatarIcon != null)
+        {
+            p1AvatarIcon.sprite = avatarIcon;
+            p1AvatarIcon.enabled = avatarIcon != null;
+        }
+        else if (playerNumber == 2 && p2AvatarIcon != null)
+        {
+            p2AvatarIcon.sprite = avatarIcon;
+            p2AvatarIcon.enabled = avatarIcon != null;
         }
     }
 }

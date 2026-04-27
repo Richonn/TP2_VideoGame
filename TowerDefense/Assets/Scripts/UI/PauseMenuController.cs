@@ -239,6 +239,13 @@ public class PauseMenuController : MonoBehaviour
         AddSettingsSection(content, "CUSTOMISATION OF AVATAR");
         GameObject avatarCustomizationGO = new GameObject("AvatarCustomization");
         avatarCustomizationGO.transform.SetParent(content.transform, false);
+        
+        // Add VerticalLayoutGroup to stack both players vertically
+        VerticalLayoutGroup avatarVLG = avatarCustomizationGO.AddComponent<VerticalLayoutGroup>();
+        avatarVLG.spacing = 20;
+        avatarVLG.childForceExpandWidth = true;
+        avatarVLG.childForceExpandHeight = false;
+        
         LayoutElement avatarLayoutElement = avatarCustomizationGO.AddComponent<LayoutElement>();
         avatarLayoutElement.flexibleWidth = 1;
         avatarLayoutElement.preferredHeight = 280;
@@ -333,12 +340,24 @@ public class PauseMenuController : MonoBehaviour
         buttonGO.transform.SetParent(parent.transform, false);
 
         Image btnImage = buttonGO.AddComponent<Image>();
-        btnImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+        btnImage.color = Color.white;
+        
+        // Load and set the icon sprite
+        Sprite iconSprite = Resources.Load<Sprite>($"AvatarIcons/{avatarType}");
+        if (iconSprite != null)
+        {
+            btnImage.sprite = iconSprite;
+        }
+        else
+        {
+            Debug.LogWarning($"[PauseMenu] Avatar icon not found: AvatarIcons/{avatarType}");
+            btnImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+        }
 
         Button btn = buttonGO.AddComponent<Button>();
         ColorBlock cb = btn.colors;
-        cb.normalColor = new Color(0.3f, 0.3f, 0.3f, 1f);
-        cb.highlightedColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+        cb.normalColor = Color.white;
+        cb.highlightedColor = new Color(1f, 1f, 0.7f, 1f);
         cb.pressedColor = new Color(0.8f, 0.8f, 0f, 1f);
         btn.colors = cb;
 
@@ -349,22 +368,8 @@ public class PauseMenuController : MonoBehaviour
         });
 
         LayoutElement le = buttonGO.AddComponent<LayoutElement>();
-        le.preferredWidth = 60;
-        le.preferredHeight = 60;
-
-        // Optional: Add avatar type text
-        GameObject textGO = new GameObject("Text");
-        textGO.transform.SetParent(buttonGO.transform, false);
-        TextMeshProUGUI tmp = textGO.AddComponent<TextMeshProUGUI>();
-        tmp.text = avatarType.ToString().Substring(0, 1);
-        tmp.fontSize = 12;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        RectTransform rt = textGO.GetComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        le.preferredWidth = 70;
+        le.preferredHeight = 70;
     }
 
     private GameObject BuildControlsPanel(GameObject parent)

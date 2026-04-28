@@ -38,6 +38,23 @@ public class PlayerController : MonoBehaviour
             footstep.Type = SFXType.PlayerFootstep;
             footstep.AutoEmit = true;
         }
+
+        // Apply the saved avatar choice as soon as this player is ready
+        AvatarSessionManager.Instance?.SetPlayerAvatar(playerNumber,
+            AvatarSessionManager.Instance.GetPlayerAvatar(playerNumber));
+    }
+
+    /// <summary>
+    /// Swaps the animator controller at runtime and refreshes the cached reference.
+    /// Called by AvatarSessionManager when the player changes their avatar.
+    /// </summary>
+    public void ApplyAnimatorController(RuntimeAnimatorController controller)
+    {
+        if (_animator == null)
+            _animator = GetComponent<Animator>();
+
+        if (_animator != null && controller != null)
+            _animator.runtimeAnimatorController = controller;
     }
 
     void Update()
@@ -127,6 +144,7 @@ public class PlayerController : MonoBehaviour
             if (currentWalkable && (targetNode == null || !targetNode.walkable))
                 return;
         }
+
         // Separately block the player from walking onto the base
         if (IsBaseAtPosition(newPos))
             return;
